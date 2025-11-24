@@ -3,15 +3,15 @@ package main;
 import javax.swing.*;
 import java.awt.*;
 import entities.GameLandingPage;
-import entities.StoryScreen; // Import the correct StoryScreen
+import entities.StoryScreen; 
 
 public class Main {
     private static JFrame window;
     private static CardLayout cardLayout;
     private static JPanel mainPanel;
     private static GameLoop gameLoop;
-    private static GameLandingPage landingPage; // Declare as static member
-    private static StoryScreen storyScreen; // Declare as static member
+    private static GameLandingPage landingPage; 
+    private static StoryScreen storyScreen; 
 
     public static void main(String[] args) {
         window = new JFrame("Blade Quest");
@@ -37,14 +37,19 @@ public class Main {
     }
 
     public static void showStoryScreen() {
-        cardLayout.show(mainPanel, "STORY");
-        storyScreen.requestFocusInWindow(); // Request focus for the StoryScreen
+        new FadeTransition(window, FadeTransition.FadeType.FADE_OUT, () -> {
+            cardLayout.show(mainPanel, "STORY");
+            storyScreen.requestFocusInWindow();
+            new FadeTransition(window, FadeTransition.FadeType.FADE_IN, null);
+        });
     }
 
     public static void startGame() {
-        cardLayout.show(mainPanel, "GAME");
-        // It's important to request focus for the game loop to receive key events.
-        gameLoop.requestFocusInWindow();
-        gameLoop.start(); // Start the game loop when the game screen is shown
+        new FadeTransition(window, FadeTransition.FadeType.FADE_OUT, () -> {
+            cardLayout.show(mainPanel, "GAME");
+            gameLoop.requestFocusInWindow();
+            gameLoop.start();
+            new FadeTransition(window, FadeTransition.FadeType.FADE_IN, null);
+        });
     }
 }

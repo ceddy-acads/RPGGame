@@ -161,9 +161,10 @@ public class StoryScreen extends JPanel {
                 g2d.setFont(new Font("Georgia", Font.ITALIC, 20));
                 FontMetrics fm = g2d.getFontMetrics();
 
-                String[] lines = text.split("\n");
+                int maxWidth = getWidth() - 100; // 50px margin on each side
+                java.util.List<String> lines = getWrappedLines(text, fm, maxWidth);
                 int lineHeight = fm.getHeight();
-                int textBlockHeight = lineHeight * lines.length;
+                int textBlockHeight = lineHeight * lines.size();
 
                 // Calculate vertical center with responsive offset
                 int verticalCenter = getHeight() / 2;
@@ -225,6 +226,33 @@ public class StoryScreen extends JPanel {
             }
 
             g2d.dispose();
+        }
+
+        private java.util.List<String> getWrappedLines(String text, FontMetrics fm, int maxWidth) {
+            java.util.List<String> lines = new java.util.ArrayList<>();
+            String[] rawLines = text.split("\n");
+
+            for (String rawLine : rawLines) {
+                if (fm.stringWidth(rawLine) <= maxWidth) {
+                    lines.add(rawLine);
+                    continue;
+                }
+
+                String[] words = rawLine.split(" ");
+                StringBuilder currentLine = new StringBuilder();
+                for (String word : words) {
+                    if (fm.stringWidth(currentLine.toString() + word) < maxWidth) {
+                        currentLine.append(word).append(" ");
+                    } else {
+                        lines.add(currentLine.toString().trim());
+                        currentLine = new StringBuilder(word + " ");
+                    }
+                }
+                if (currentLine.length() > 0) {
+                    lines.add(currentLine.toString().trim());
+                }
+            }
+            return lines;
         }
     }
 
