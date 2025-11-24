@@ -4,9 +4,12 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import javax.swing.ImageIcon;
 import input.KeyHandler;
-import maps.Map; // Import the Map class
+import maps.Map; 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import java.io.IOException;
 
 public class Player {
     private int qCooldown = 0;
@@ -23,6 +26,12 @@ public class Player {
     private boolean takingDamage = false;
     private int flashTimer = 0;
 
+    // Player stats
+    private int baseAttack = 100;
+    private int baseDefense = 5;
+    private int equippedAttack = 0;
+    private int equippedDefense = 0;
+
     // Position stored as doubles to support diagonal normalization cleanly
     public double px, py; // Made public for direct access in GameLoop for camera
     private double speed;
@@ -33,18 +42,23 @@ public class Player {
     private static final int IDLE = 0;
     private static final int WALKING = 1;
     private static final int ATTACKING = 2;
-    private static final int DYING = 3; // New state for death animation
+    private static final int DYING = 3;
+    private static final int HURT = 4; // New state for taking damage
     private int state = IDLE;  // Start in idle state
 
-    // Animation frames [direction][frameIndex] (we assume 3 frames per direction)
+    // Animation frames [direction][frameIndex]
     private Image[][] frames;
-    private Image[] dieFrames; // New array for death animation frames
+    private Image[][] dieFrames; // New array for death animation frames
+    private Image[][] attackFrames;
+    private Image[][] idleFrames;
+    private Image[][] hurtFrames;
     private Image currentImg;  // General image
-    private Image idleImg;     // Specific idle image
-    private int frameIndex = 1;        // Default for walking
+    private int deathDirection = DOWN;
+    private int frameIndex = 0;        // Default for walking
     private float accumulatedAnimationTime = 0f;  // For time-based animation
     private final float playerFrameDuration = 0.1f;  // Time per frame
     private boolean deathAnimationFinished = false; // Flag to indicate if death animation is done
+    private static final int HURT_FRAMES = 5;
 
     // Direction constants
     private static final int DOWN = 0;
@@ -56,11 +70,10 @@ public class Player {
     private static final int DOWN_LEFT = 6;
     private static final int DOWN_RIGHT = 7;
     private int currentDirection = DOWN;
-    private boolean facingRight = true;
-
+    
     // Player dimensions for collision
-    private final int playerWidth = 48; // Increased width to match TILE_SIZE
-    private final int playerHeight = 48; // Increased height to match TILE_SIZE
+    public final int playerWidth = 80; // Increased width to match TILE_SIZE
+    public final int playerHeight = 80; // Increased height to match TILE_SIZE
 
     // Slash attacks for SkillQ
     private final ArrayList<SlashAttack> slashes = new ArrayList<>();
@@ -75,14 +88,32 @@ public class Player {
         return skillWAttacks;
     }
 
+    public int getTotalAttack() {
+        return baseAttack + equippedAttack;
+    }
+
+    public int getTotalDefense() {
+        return baseDefense + equippedDefense;
+    }
+
+    public void setEquippedStats(int attack, int defense) {
+        this.equippedAttack = attack;
+        this.equippedDefense = defense;
+    }
+
     public void takeDamage(int amount) {
-        if (!alive || state == DYING) return; // Cannot take damage if already dead or dying
-        hp -= amount;
-        takingDamage = true;
-        flashTimer = 10; // short red flash
+        if (!alive || state == DYING || state == HURT) return;
+
+        int damageTaken = Math.max(0, amount - getTotalDefense());
+        hp -= damageTaken;
+        state = HURT;
+        frameIndex = 0;
+        accumulatedAnimationTime = 0f;
+
         if (hp <= 0) {
             hp = 0;
             alive = false;
+            this.deathDirection = this.currentDirection; // Store direction at time of death
             state = DYING; // Set state to DYING
             frameIndex = 0; // Start death animation from first frame
             accumulatedAnimationTime = 0f; // Reset animation timer
@@ -100,42 +131,117 @@ public class Player {
         this.speed = 4.0;
         this.hp = 100;
         loadFrames();  // Load all frames, including idle and die frames
-        idleImg = loadImg("/assets/characters/Idle.png");  // Load your specific idle sprite
-        currentImg = idleImg;  // Start with idle image
+        currentImg = idleFrames[DOWN][0];  // Start with idle image
         // Initial facing based on keyH is removed, will be set by movement
     }
 
     // Load frames for 4 directions and reuse for diagonals if needed
     private void loadFrames() {
-        frames = new Image[8][3]; // 8 directions, 3 frames each
-        frames[UP][0] = loadImg("/assets/characters/player_up_1.png");
-        frames[UP][1] = loadImg("/assets/characters/player_up_2.png");
-        frames[UP][2] = loadImg("/assets/characters/player_up_3.png");
-        frames[DOWN][0] = loadImg("/assets/characters/player_down_1.png");
-        frames[DOWN][1] = loadImg("/assets/characters/player_down_2.png");
-        frames[DOWN][2] = loadImg("/assets/characters/player_down_3.png");
-        // We use right sprites and flip for left
-        frames[RIGHT][0] = loadImg("/assets/characters/player_right_1.png");
-        frames[RIGHT][1] = loadImg("/assets/characters/player_right_2.png");
-        frames[RIGHT][2] = loadImg("/assets/characters/player_right_3.png");
-        // Reuse right frames for left - flipping is done in draw()
-        frames[LEFT][0] = frames[RIGHT][0];
-        frames[LEFT][1] = frames[RIGHT][1];
-        frames[LEFT][2] = frames[RIGHT][2];
-        // Diagonals reuse vertical frames for now
+        frames = new Image[8][6]; // 8 directions, 6 frames each
+        attackFrames = new Image[8][6];
+        idleFrames = new Image[8][6];
+        BufferedImage spriteSheet = loadSpriteSheet("/assets/characters/player_walk.png");
+
+        if (spriteSheet != null) {
+            
+            for (int i = 0; i < 6; i++) { 
+                frames[DOWN][i] = getSubImage(spriteSheet, i, 0);
+                frames[LEFT][i] = getSubImage(spriteSheet, i, 1); 
+                frames[RIGHT][i] = getSubImage(spriteSheet, i, 2);
+                frames[UP][i] = getSubImage(spriteSheet, i, 3);
+            }
+        }
+
+        // Diagonals reuse vertical/horizontal frames
         frames[UP_LEFT] = frames[UP];
         frames[UP_RIGHT] = frames[UP];
         frames[DOWN_LEFT] = frames[DOWN];
         frames[DOWN_RIGHT] = frames[DOWN];
 
-        // Load death animation frames
-        dieFrames = new Image[5]; // die_1.png to die_5.png
-        for (int i = 0; i < 5; i++) {
-            dieFrames[i] = loadImg("/assets/characters/die_" + (i + 1) + ".png");
-            if (dieFrames[i] == null) {
-                System.err.println("Player: missing die frame die_" + (i + 1) + ".png");
+        // Load death animation frames from sprite sheet
+        dieFrames = new Image[8][6]; // Match frames structure
+        BufferedImage dieSpriteSheet = loadSpriteSheet("/assets/characters/player_death.png");
+        if (dieSpriteSheet != null) {
+            // Row 0: Die Down
+            // Row 1: Die Left
+            // Row 2: Die Right
+            // Row 3: Die Up (Assuming typo from Row 4)
+            for (int i = 0; i < 6; i++) { // 6 frames per direction
+                dieFrames[DOWN][i] = getSubImage(dieSpriteSheet, i, 0);
+                dieFrames[LEFT][i] = getSubImage(dieSpriteSheet, i, 1);
+                dieFrames[RIGHT][i] = getSubImage(dieSpriteSheet, i, 2);
+                dieFrames[UP][i] = getSubImage(dieSpriteSheet, i, 3);
+            }
+             // Map diagonals
+            dieFrames[UP_LEFT] = dieFrames[LEFT];
+            dieFrames[UP_RIGHT] = dieFrames[RIGHT];
+            dieFrames[DOWN_LEFT] = dieFrames[LEFT];
+            dieFrames[DOWN_RIGHT] = dieFrames[RIGHT];
+        } else {
+            System.err.println("Player: missing die sprite sheet.");
+        }
+        
+        BufferedImage attackSpriteSheet = loadSpriteSheet("/assets/characters/playerwalk_attack.png");
+        if(attackSpriteSheet != null){
+            for (int i = 0; i < 6; i++) { 
+                attackFrames[DOWN][i] = getSubImage(attackSpriteSheet, i, 0);
+                attackFrames[LEFT][i] = getSubImage(attackSpriteSheet, i, 1); 
+                attackFrames[RIGHT][i] = getSubImage(attackSpriteSheet, i, 2);
+                attackFrames[UP][i] = getSubImage(attackSpriteSheet, i, 3);
             }
         }
+        
+        attackFrames[UP_LEFT] = attackFrames[UP];
+        attackFrames[UP_RIGHT] = attackFrames[UP];
+        attackFrames[DOWN_LEFT] = attackFrames[DOWN];
+        attackFrames[DOWN_RIGHT] = attackFrames[DOWN];
+
+        // Use the first frame of walking animation as the idle frame
+        for (int i = 0; i < 6; i++) { // Assign the first frame to all idle frames to stop animation
+            idleFrames[DOWN][i] = frames[DOWN][0];
+            idleFrames[LEFT][i] = frames[LEFT][0];
+            idleFrames[RIGHT][i] = frames[RIGHT][0];
+            idleFrames[UP][i] = frames[UP][0];
+        }
+
+        idleFrames[UP_LEFT] = idleFrames[UP];
+        idleFrames[UP_RIGHT] = idleFrames[UP];
+        idleFrames[DOWN_LEFT] = idleFrames[DOWN];
+        idleFrames[DOWN_RIGHT] = idleFrames[DOWN];
+
+        // Load hurt animation frames
+        hurtFrames = new Image[8][HURT_FRAMES];
+        BufferedImage hurtSpriteSheet = loadSpriteSheet("/assets/characters/player_hurt.png");
+        if (hurtSpriteSheet != null) {
+            for (int i = 0; i < HURT_FRAMES; i++) {
+                hurtFrames[DOWN][i] = getSubImage(hurtSpriteSheet, i, 0);
+                hurtFrames[LEFT][i] = getSubImage(hurtSpriteSheet, i, 1);
+                hurtFrames[RIGHT][i] = getSubImage(hurtSpriteSheet, i, 2);
+                hurtFrames[UP][i] = getSubImage(hurtSpriteSheet, i, 3);
+            }
+        }
+        hurtFrames[UP_LEFT] = hurtFrames[UP];
+        hurtFrames[UP_RIGHT] = hurtFrames[UP];
+        hurtFrames[DOWN_LEFT] = hurtFrames[DOWN];
+        hurtFrames[DOWN_RIGHT] = hurtFrames[DOWN];
+    }
+    
+    private BufferedImage loadSpriteSheet(String path) {
+        try {
+            java.net.URL res = getClass().getResource(path);
+            if (res != null) {
+                return ImageIO.read(res);
+            }
+        } catch (IOException e) {
+            System.err.println("Could not load sprite sheet: " + path);
+        }
+        return null;
+    }
+
+    private Image getSubImage(BufferedImage spriteSheet, int col, int row) {
+        int spriteWidth = 64;
+        int spriteHeight = 64;
+        return spriteSheet.getSubimage(col * spriteWidth, row * spriteHeight, spriteWidth, spriteHeight);
     }
 
     private Image loadImg(String path) {
@@ -164,12 +270,26 @@ public class Player {
             if (accumulatedAnimationTime >= playerFrameDuration) {
                 frameIndex++;
                 accumulatedAnimationTime -= playerFrameDuration;
-                if (frameIndex >= dieFrames.length) {
-                    frameIndex = dieFrames.length - 1; // Stay on the last frame
+                if (frameIndex >= dieFrames[0].length) { // Check against number of frames in one sequence
+                    frameIndex = dieFrames[0].length - 1; // Stay on the last frame
                     deathAnimationFinished = true;
                 }
             }
             // If dying, skip all movement and attack logic
+            return;
+        }
+
+        if (state == HURT) {
+            accumulatedAnimationTime += deltaTime;
+            if (accumulatedAnimationTime >= playerFrameDuration) {
+                frameIndex++;
+                accumulatedAnimationTime -= playerFrameDuration;
+                if (frameIndex >= HURT_FRAMES) {
+                    frameIndex = 0;
+                    state = IDLE; // Return to idle after hurt animation
+                }
+            }
+            // Skip other logic when hurt
             return;
         }
 
@@ -226,21 +346,33 @@ public class Player {
                 py += dy;
             }
         }
-
-        // Determine state based on movement
-        if (dx != 0 || dy != 0) {
-            state = WALKING;
-        } else {
-            state = IDLE;
-        }
-
-        // If any attack is active, override the state to ATTACKING
-        if (!slashes.isEmpty() || !skillWAttacks.isEmpty()) {
+        
+        boolean isAttacking = !slashes.isEmpty() || !skillWAttacks.isEmpty();
+        if (isAttacking) {
             state = ATTACKING;
+        } else {
+            if (dx != 0 || dy != 0) {
+                state = WALKING;
+            } else {
+                state = IDLE;
+            }
         }
-
+        // Update active attacks
+        Iterator<SlashAttack> it = slashes.iterator();
+        while (it.hasNext()) {
+            SlashAttack s = it.next();
+            s.update(deltaTime);
+            if (!s.active) it.remove();
+        }
+        Iterator<SkillWAttack> skillWIt = skillWAttacks.iterator();
+        while (skillWIt.hasNext()) {
+            SkillWAttack s = skillWIt.next();
+            s.update(deltaTime);
+            if (!s.active) skillWIt.remove();
+        }
+        
         // Determine current facing based on last input vector, but only if not attacking
-        if (state != ATTACKING) { // Only update direction if not attacking
+        if (!isAttacking) { 
             if (dx > 0 && dy < 0) currentDirection = UP_RIGHT;
             else if (dx > 0 && dy > 0) currentDirection = DOWN_RIGHT;
             else if (dx < 0 && dy < 0) currentDirection = UP_LEFT;
@@ -251,17 +383,38 @@ public class Player {
             else if (dy > 0) currentDirection = DOWN;
         }
 
-        // Animation (only if not attacking)
-        if (state == WALKING) { // Only animate walking if in WALKING state
-            accumulatedAnimationTime += deltaTime;
-            while (accumulatedAnimationTime >= playerFrameDuration) {
-                frameIndex++;
-                if (frameIndex > 2) frameIndex = 0;  // Loop back to first frame
-                accumulatedAnimationTime -= playerFrameDuration;
-            }
-            currentImg = frames[currentDirection][frameIndex];  // Update to walking frame
-        } else if (state == IDLE) { // Only set idle image if in IDLE state
-            currentImg = idleImg;  // Use the custom idle image
+        // Animation logic based on state
+        switch (state) {
+            case HURT:
+                currentImg = hurtFrames[currentDirection][frameIndex];
+                break;
+            case ATTACKING:
+                accumulatedAnimationTime += deltaTime;
+                while (accumulatedAnimationTime >= playerFrameDuration) {
+                    frameIndex++;
+                    if (frameIndex > 5) frameIndex = 0;
+                    accumulatedAnimationTime -= playerFrameDuration;
+                }
+                currentImg = attackFrames[currentDirection][frameIndex];
+                break;
+            case WALKING:
+                accumulatedAnimationTime += deltaTime;
+                while (accumulatedAnimationTime >= playerFrameDuration) {
+                    frameIndex++;
+                    if (frameIndex > 5) frameIndex = 0;
+                    accumulatedAnimationTime -= playerFrameDuration;
+                }
+                currentImg = frames[currentDirection][frameIndex];
+                break;
+            case IDLE:
+                accumulatedAnimationTime += deltaTime;
+                while (accumulatedAnimationTime >= playerFrameDuration) {
+                    frameIndex++;
+                    if (frameIndex > 5) frameIndex = 0;
+                    accumulatedAnimationTime -= playerFrameDuration;
+                }
+                currentImg = idleFrames[currentDirection][frameIndex];
+                break;
         }
 
         // Skills E/R/T — dummy for now
@@ -280,41 +433,6 @@ public class Player {
             useSkillT();
             keyH.skillT = false;
         }
-
-        // Update slashes
-        Iterator<SlashAttack> it = slashes.iterator();
-        while (it.hasNext()) {
-            SlashAttack s = it.next();
-            s.update(deltaTime);
-            if (!s.active) it.remove();
-        }
-
-        // Update skillW attacks
-        Iterator<SkillWAttack> skillWIt = skillWAttacks.iterator();
-        while (skillWIt.hasNext()) {
-            SkillWAttack s = skillWIt.next();
-            s.update(deltaTime);
-            if (!s.active) skillWIt.remove();
-        }
-
-        // Handle DYING state
-        if (state == DYING) {
-            accumulatedAnimationTime += deltaTime;
-            if (accumulatedAnimationTime >= playerFrameDuration) {
-                frameIndex++;
-                accumulatedAnimationTime -= playerFrameDuration;
-                if (frameIndex >= dieFrames.length) {
-                    frameIndex = dieFrames.length - 1; // Stay on the last frame
-                    deathAnimationFinished = true;
-                }
-            }
-            return; // Stop further updates if dying
-        }
-
-        // Return to idle or walking if no attacks are active
-        if (slashes.isEmpty() && skillWAttacks.isEmpty()) {
-            state = (dx != 0 || dy != 0) ? WALKING : IDLE;
-        }
     }
 
     public void draw(Graphics g, int screenX, int screenY) {
@@ -323,15 +441,16 @@ public class Player {
         }
 
         Graphics2D g2 = (Graphics2D) g;
-        int drawX = screenX;
-        int drawY = screenY;
+        int drawX = screenX - playerWidth / 2;
+        int drawY = screenY - playerHeight / 2;
         int width = playerWidth;
         int height = playerHeight;
 
         // Draw death animation if dying
         if (state == DYING && !deathAnimationFinished) {
-            if (dieFrames[frameIndex] != null) {
-                g2.drawImage(dieFrames[frameIndex], drawX, drawY, width, height, null);
+            Image currentDieFrame = dieFrames[deathDirection][frameIndex];
+            if (currentDieFrame != null) {
+                g2.drawImage(currentDieFrame, drawX, drawY, width, height, null);
             } else {
                 g2.setColor(Color.DARK_GRAY); // Fallback for missing death frame
                 g2.fillRect(drawX, drawY, width, height);
@@ -340,24 +459,11 @@ public class Player {
         }
 
 
-        // Flash red when hit
-        if (takingDamage) {
-            g2.setColor(Color.RED);
-            flashTimer--;
-            if (flashTimer <= 0) takingDamage = false;
-            g2.fillRect(drawX, drawY, width, height);
-        } else if (state != ATTACKING) { // Only draw player image if not attacking
-            boolean facingLeft = (currentDirection == LEFT || currentDirection == UP_LEFT || currentDirection == DOWN_LEFT);
-            if (currentImg != null) {
-                if (facingLeft) {
-                    g2.drawImage(currentImg, drawX + width, drawY, -width, height, null);
-                } else {
-                    g2.drawImage(currentImg, drawX, drawY, width, height, null);
-                }
-            } else {
-                g2.setColor(Color.BLUE);
-                g2.fillRect(drawX, drawY, 32, 32);
-            }
+        if (currentImg != null) {
+            g2.drawImage(currentImg, drawX, drawY, width, height, null);
+        } else {
+            g2.setColor(Color.BLUE);
+            g2.fillRect(drawX, drawY, 32, 32);
         }
 
         // Draw HP bar above player
@@ -385,7 +491,7 @@ public class Player {
             case DOWN_LEFT: sx = drawX - offset; sy = drawY + offset; break;
             case DOWN_RIGHT: sx = drawX + offset; sy = drawY + offset; break;
         }
-        slashes.add(new SlashAttack(sx, sy, currentDirection));
+        slashes.add(new SlashAttack(sx, sy, currentDirection, getTotalAttack()));
         state = ATTACKING;
     }
 
@@ -405,7 +511,7 @@ public class Player {
             case DOWN_LEFT: sx = drawX - offset; sy = drawY + offset; break;
             case DOWN_RIGHT: sx = drawX + offset; sy = drawY + offset; break;
         }
-        skillWAttacks.add(new SkillWAttack(sx, sy, currentDirection));
+        skillWAttacks.add(new SkillWAttack(sx, sy, currentDirection, getTotalAttack()));
         state = ATTACKING;
     }
 

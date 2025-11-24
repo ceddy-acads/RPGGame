@@ -29,8 +29,10 @@ public class GameLandingPage extends JPanel implements ActionListener, MouseList
 
     private int swordY = 0;
     private boolean swordUp = true;
+    private Runnable onPlay;
 
-    public GameLandingPage() {
+    public GameLandingPage(Runnable onPlay) {
+        this.onPlay = onPlay;
         setPreferredSize(new Dimension(800, 600));
 
         loadAssets();
@@ -203,10 +205,7 @@ public class GameLandingPage extends JPanel implements ActionListener, MouseList
     @Override
     public void mouseClicked(MouseEvent e) {
         if (playButton.contains(e.getPoint())) {
-            new FadeTransition((JFrame) SwingUtilities.getWindowAncestor(this), () -> {
-                SwingUtilities.getWindowAncestor(this).dispose();
-                SwingUtilities.invokeLater(StoryScreen::new);
-            });
+            onPlay.run();
         }
     }
     @Override

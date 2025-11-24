@@ -6,7 +6,7 @@ import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
-public class StoryScreen extends JFrame {
+public class StoryScreen extends JPanel {
 
     private FadePanel imagePanel;
     private JTextArea storyText;
@@ -18,14 +18,13 @@ public class StoryScreen extends JFrame {
     private int currentSlide = 0;
     private ArrayList<String> paragraphs;
     private ArrayList<Image> images;
+    private Runnable onStoryEnd;
 
-    public StoryScreen() {
-        setTitle("Blade Quest - Lore");
-        setSize(800, 600);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
+    public StoryScreen(Runnable onStoryEnd) {
+        this.onStoryEnd = onStoryEnd;
+        setPreferredSize(new Dimension(800, 600));
         setLayout(new BorderLayout());
-        getContentPane().setBackground(Color.BLACK);
+        setBackground(Color.BLACK);
 
         imagePanel = new FadePanel();
         add(imagePanel, BorderLayout.CENTER);
@@ -45,25 +44,14 @@ public class StoryScreen extends JFrame {
         imagePanel.setText(paragraphs.get(0));
         imagePanel.setCurrentImage(images.get(0));
 
-        setVisible(true);
-
-        getRootPane().setFocusable(true);
-        getRootPane().addKeyListener(new KeyAdapter() {
+        setFocusable(true);
+        addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_SPACE || e.getKeyCode() == KeyEvent.VK_ENTER) {
                     nextSlide();
                 }
                 if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                    dispose();
-                    SwingUtilities.invokeLater(() -> {
-                        JFrame window = new JFrame("RPG Game - Arrow + QWERT Controller");
-                        window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                        window.setResizable(false);
-                        window.setContentPane(new main.GameLoop());
-                        window.pack();
-                        window.setVisible(true);
-                        window.setLocationRelativeTo(null);
-                    }); // skip to game
+                    onStoryEnd.run(); // skip to game
                 }
             }
         });
@@ -71,16 +59,7 @@ public class StoryScreen extends JFrame {
 
     private void nextSlide() {
         if (currentSlide >= paragraphs.size() - 1) {
-            dispose();
-            SwingUtilities.invokeLater(() -> {
-                JFrame window = new JFrame("RPG Game - Arrow + QWERT Controller");
-                window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                window.setResizable(false);
-                window.setContentPane(new main.GameLoop());
-                window.pack();
-                window.setVisible(true);
-                window.setLocationRelativeTo(null);
-            });
+            onStoryEnd.run();
             return;
         }
 
@@ -249,7 +228,4 @@ public class StoryScreen extends JFrame {
         }
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(StoryScreen::new);
-    }
 }

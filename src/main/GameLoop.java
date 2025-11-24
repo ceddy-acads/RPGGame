@@ -10,7 +10,7 @@ import entities.Player;
 import entities.Enemy;
 import entities.SlashAttack;
 import entities.SkillWAttack;
-import entities.inventory; // Corrected import for the inventory class
+import entities.InventoryUI;
 import entities.Hotbar;
 import maps.Map;
 import maps.MapLoader;
@@ -23,7 +23,7 @@ public class GameLoop extends JLayeredPane implements Runnable { // Changed to e
     final int TILE_SIZE = 48; // Consistent tile size
 
     private boolean inventoryOpen = false; // To track inventory state
-    private inventory gameInventory; // The inventory panel
+    private InventoryUI gameInventory; // The inventory panel
 
     private Thread gameThread;
     private KeyHandler keyH;
@@ -46,6 +46,8 @@ public class GameLoop extends JLayeredPane implements Runnable { // Changed to e
         this.requestFocusInWindow();
         this.addKeyListener(keyH);
 
+        setupKeyBindings();
+
         // Load map images and create Map object
         BufferedImage mapImage = MapLoader.loadMapImage("forest"); // Assuming "forest" is the map name
         BufferedImage collisionMask = MapLoader.loadCollisionMask("forest");
@@ -59,7 +61,7 @@ public class GameLoop extends JLayeredPane implements Runnable { // Changed to e
         spawnEnemies();
 
         // Initialize inventory
-        gameInventory = new inventory();
+        gameInventory = new InventoryUI(player);
 
         // Initialize hotbar
         hotbar = new Hotbar(WIDTH, HEIGHT, gameInventory);
@@ -67,7 +69,23 @@ public class GameLoop extends JLayeredPane implements Runnable { // Changed to e
         gameInventory.setVisible(false); // Start invisible
         this.add(gameInventory, JLayeredPane.PALETTE_LAYER); // Add to a higher layer
 
+    }
+
+    public void start() {
         startGameThread();
+    }
+
+    private void setupKeyBindings() {
+        InputMap im = this.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap am = this.getActionMap();
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_I, 0), "toggleInventory");
+        am.put("toggleInventory", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                toggleInventory();
+            }
+        });
     }
 
     private void toggleInventory() {
@@ -90,7 +108,7 @@ public class GameLoop extends JLayeredPane implements Runnable { // Changed to e
     @Override
     public void addNotify() {
         super.addNotify();
-        requestFocusInWindow();
+        // Removed requestFocusInWindow here to allow Main class to manage focus
     }
 
     public void startGameThread() {
@@ -117,15 +135,7 @@ public class GameLoop extends JLayeredPane implements Runnable { // Changed to e
         }
     }
 
-    private boolean lastInventoryToggleState = false; // Track the previous state of inventoryPressed
-
     public void update() {
-        // Toggle inventory if 'I' key is pressed and it wasn't pressed in the last frame
-        if (keyH.inventoryPressed && !lastInventoryToggleState) {
-            toggleInventory();
-        }
-        lastInventoryToggleState = keyH.inventoryPressed; // Update the last state
-
         if (inventoryOpen) {
             // If inventory is open, pause game updates
             return;
@@ -139,10 +149,23 @@ public class GameLoop extends JLayeredPane implements Runnable { // Changed to e
     	    Rectangle slashBounds = slash.getBounds();
     	    for (Enemy enemy : enemies) {
     	        if (enemy.isAlive() && slashBounds.intersects(enemy.getBounds())) {
-                    System.out.println("SLASH HIT! Slash at (" + slash.x + "," + slash.y + ") hit enemy at (" + enemy.getX() + "," + enemy.getY() + "), damage: " + slash.getDamage());
-                    if (!slash.hasHit()) {
+                    if (!slash.hasHit(enemy)) {
                         enemy.takeDamage(slash.getDamage());
-                        slash.setHasHit(true);
+                        slash.addHitEnemy(enemy);
+                    }
+    	        }
+    	    }
+    	}
+
+    	// Check collisions between SkillWAttacks and enemies
+    	for (SkillWAttack skillW : player.getSkillWAttacks()) {
+    	    if (!skillW.active) continue;
+    	    Rectangle skillWBounds = skillW.getBounds();
+    	    for (Enemy enemy : enemies) {
+    	        if (enemy.isAlive() && skillWBounds.intersects(enemy.getBounds())) {
+                    if (!skillW.hasHit(enemy)) {
+                        enemy.takeDamage(skillW.getDamage());
+                        skillW.addHitEnemy(enemy);
                     }
     	        }
     	    }

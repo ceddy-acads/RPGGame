@@ -12,8 +12,6 @@ public class KeyHandler implements KeyListener {
 
     // Skill keys
     public boolean skillQ, skillW, skillE, skillR, skillT;
-    // Inventory key
-    public boolean inventoryPressed;
 
     // Debounce mechanism as a fallback
     private Map<Integer, Long> lastPressTime = new HashMap<>();  // Key: keyCode, Value: last press time
@@ -50,10 +48,6 @@ public class KeyHandler implements KeyListener {
             case KeyEvent.VK_T:
                 skillT = true;
                 break;
-            // Inventory
-            case KeyEvent.VK_I:
-                inventoryPressed = true;
-                break;
         }
     }
 
@@ -74,8 +68,6 @@ public class KeyHandler implements KeyListener {
             case KeyEvent.VK_E: skillE = false; break;
             case KeyEvent.VK_R: skillR = false; break;
             case KeyEvent.VK_T: skillT = false; break;
-            // Inventory
-            case KeyEvent.VK_I: inventoryPressed = false; break;
         }
     }
 }

@@ -5,6 +5,8 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.InputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SkillWAttack {
     public int x, y;
@@ -19,54 +21,35 @@ public class SkillWAttack {
     private final float secondsPerFrame;
     private int width = 50;  // Match character size
     private int height = 50; // Match character size
-    
+
+    private List<Enemy> hitEnemies = new ArrayList<>();
+
     public Rectangle getBounds() {
         return new Rectangle((int)x, (int)y, width, height);
     }
     
-    private int damage = 20;
+    private int damage;
     public int getDamage() { return damage; }
+
+    public boolean hasHit(Enemy enemy) {
+        return hitEnemies.contains(enemy);
+    }
+
+    public void addHitEnemy(Enemy enemy) {
+        hitEnemies.add(enemy);
+    }
     
-    public SkillWAttack(int x, int y, int direction) {
+    public SkillWAttack(int x, int y, int direction, int playerAttack) {
         this.x = x;
         this.y = y;
         this.direction = direction;
-        
+        // Randomize damage: ±20% variation
+        double variation = 0.8 + Math.random() * 0.4;
+        this.damage = Math.max(1, (int)(playerAttack * variation));
+
         this.secondsPerFrame = (float) frameDelay / 60.0f;
-        
-        loadFrames();
-    }
-    
-    private void loadFrames() {
-        String[] names = { "skillw_1.png", "skillw_2.png", "skillw_3.png", "skillw_4.png" };
-        
-        frames = new BufferedImage[names.length];
-        boolean allFramesLoaded = true;
-        for (int i = 0; i < names.length; i++) {
-            frames[i] = tryLoad(names[i]);
-            if (frames[i] == null) {
-                System.err.println("SkillWAttack: missing frame " + names[i]);
-                allFramesLoaded = false;
-            }
-        }
-        // Don't override width/height from frame dimensions - use character size
-        if (!allFramesLoaded) {
-            active = false;
-        }
-    }
-    
-    private BufferedImage tryLoad(String filename) {
-        String[] candidates = { "/sprites/" + filename, "/assets/sprites/" + filename, "/assets/" + filename, "/resources/sprites/" + filename };
-        for (String path : candidates) {
-            try (InputStream is = getClass().getResourceAsStream(path)) {
-                if (is != null) {
-                    return ImageIO.read(is);
-                }
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-        }
-        return null;
+
+        frames = new BufferedImage[4];
     }
     
     public void update(float deltaTime) {

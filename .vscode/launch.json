@@ -1,0 +1,20 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Game",
+            "request": "launch",
+            "mainClass": "main.Game",
+            "projectName": "RPGGame"
+        },
+        {
+            "type": "java",
+            "name": "Launch Main",
+            "request": "launch",
+            "mainClass": "main.Main",
+            "projectName": "RPGGame",
+            "vmArgs": "--module-path \"C:\\Users\\johnc\\javafx-sdk-25.0.1\\lib\" --add-modules javafx.controls,javafx.fxml"
+        }
+    ]
+}
