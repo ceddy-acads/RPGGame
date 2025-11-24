@@ -11,7 +11,7 @@ public class KeyHandler implements KeyListener {
     public boolean upPressed, downPressed, leftPressed, rightPressed;
 
     // Skill keys
-    public boolean skillQ, skillW, skillE, skillR, skillT;
+    public boolean skillSPACE, skillW, skillE, skillR, skillT;
 
     // Debounce mechanism as a fallback
     private Map<Integer, Long> lastPressTime = new HashMap<>();  // Key: keyCode, Value: last press time
@@ -27,17 +27,14 @@ public class KeyHandler implements KeyListener {
 
         switch (code) {
             // Movement
-            case KeyEvent.VK_UP: upPressed = true; break;
-            case KeyEvent.VK_DOWN: downPressed = true; break;
-            case KeyEvent.VK_LEFT: leftPressed = true; break;
-            case KeyEvent.VK_RIGHT: rightPressed = true; break;
+            case KeyEvent.VK_W: upPressed = true; break;
+            case KeyEvent.VK_S: downPressed = true; break;
+            case KeyEvent.VK_A: leftPressed = true; break;
+            case KeyEvent.VK_D: rightPressed = true; break;
 
             // Skills - remove debounce for combat responsiveness
-            case KeyEvent.VK_Q:
-                skillQ = true;
-                break;
-            case KeyEvent.VK_W:
-                skillW = true;
+            case KeyEvent.VK_SPACE:
+                skillSPACE = true;
                 break;
             case KeyEvent.VK_E:
                 skillE = true;
@@ -57,14 +54,13 @@ public class KeyHandler implements KeyListener {
 
         switch (code) {
             // Movement
-            case KeyEvent.VK_UP: upPressed = false; break;
-            case KeyEvent.VK_DOWN: downPressed = false; break;
-            case KeyEvent.VK_LEFT: leftPressed = false; break;
-            case KeyEvent.VK_RIGHT: rightPressed = false; break;
+            case KeyEvent.VK_W: upPressed = false; break;
+            case KeyEvent.VK_S: downPressed = false; break;
+            case KeyEvent.VK_A: leftPressed = false; break;
+            case KeyEvent.VK_D: rightPressed = false; break;
 
             // Skills
-            case KeyEvent.VK_Q: skillQ = false; break;
-            case KeyEvent.VK_W: skillW = false; break;
+            case KeyEvent.VK_SPACE: skillSPACE= false; break;
             case KeyEvent.VK_E: skillE = false; break;
             case KeyEvent.VK_R: skillR = false; break;
             case KeyEvent.VK_T: skillT = false; break;

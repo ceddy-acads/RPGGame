@@ -176,36 +176,9 @@ public class Enemy {
         double dy = playerY - y;
         double dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist > 10) { // follow player
-            double moveX = (dx / dist) * speed;
-            double moveY = (dy / dist) * speed;
-            
-            // Check collision before moving horizontally
-            int nextX = (int) (x + moveX);
-            if (currentMap.isWalkable(nextX, (int) y, width, height)) {
-                x += moveX;
-            }
-            
-            // Check collision before moving vertically
-            int nextY = (int) (y + moveY);
-            if (currentMap.isWalkable((int) x, nextY, width, height)) {
-                y += moveY;
-            }
-        } else {
-            // Close enough to attack
-            if (attackTimer <= 0) {
-                System.out.println("Enemy attacks!");
-                player.takeDamage(attackDamage);
-                attackTimer = attackCooldown;
-            }
-        }
-
-        if (attackTimer > 0) attackTimer--;
-
-        
         facingLeft = dx < 0;  // face left if player is to the left
 
-        if (dist > 10) { // Move toward player
+        if (dist > 10 && !attacking) { // Move toward player only if not in the middle of an attack
             double moveX = (dx / dist) * speed;
             double moveY = (dy / dist) * speed;
             
@@ -228,14 +201,14 @@ public class Enemy {
                 frameTimer = 0;
             }
             sprite = walkFrames[currentFrame];
-        }  else { 
-            // Close enough to attack
-            if (!attacking && attackCooldown == 0) {
+        } else { 
+            // Close enough to attack or already attacking
+            if (!attacking && attackCooldown <= 0) {
                 attacking = true;
                 attackFrame = 0;
-                attackTimer = 0;
                 attackCooldown = 90; 
                 System.out.println("Enemy Attacking!");
+                player.takeDamage(attackDamage); // Deal damage at the start of the attack animation
             }
 
             if (attacking) {
@@ -248,17 +221,20 @@ public class Enemy {
                     if (attackFrame >= attackFrames.length) {
                         attackFrame = 0;
                         attacking = false;
-                        attackCooldown = 60; // add small delay before next attack
                     }
                 }
-                sprite = attackFrames[attackFrame];
+                
+                if (attacking) {
+                    sprite = attackFrames[attackFrame];
+                }
             } else {
-                // If not attacking and close, set to idle or last walking frame
+                // If not attacking and close, set to idle and manage cooldown
                 sprite = idleImg;
+                if (attackCooldown > 0) {
+                    attackCooldown--;
+                }
             }
-
         }
-        
     }
 
 

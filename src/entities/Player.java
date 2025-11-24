@@ -16,8 +16,6 @@ public class Player {
     private final int Q_COOLDOWN_MAX = 30; // 30 frames = 0.5 sec at 60FPS
     private int wCooldown = 0;
     private final int W_COOLDOWN_MAX = 60; // 1 sec
-    private boolean hasAttackedQ = false;
-    private boolean hasAttackedW = false;
 
     //HP of the character
     private int maxHp = 100;
@@ -297,23 +295,17 @@ public class Player {
         if (wCooldown > 0) wCooldown--;
 
         // --- Q Attack: cooldown-limited, one press = one attack ---
-        if (keyH.skillQ && !hasAttackedQ && qCooldown == 0) {
+        if (keyH.skillSPACE && qCooldown == 0) { // Changed to skillSPACE
             useSkillQ();
-            hasAttackedQ = true;
             qCooldown = Q_COOLDOWN_MAX;
-        }
-        if (!keyH.skillQ) {
-            hasAttackedQ = false;
+            keyH.skillSPACE = false; // Reset the skill key after use
         }
 
-        // --- W Attack: no cooldown in this example, but one press = one attack ---
-        if (keyH.skillW && !hasAttackedW && wCooldown == 0) {
+        // --- W Attack: cooldown-limited, one press = one attack ---
+        if (keyH.skillW && wCooldown == 0) {
             useSkillW();
-            hasAttackedW = true;
             wCooldown = W_COOLDOWN_MAX;
-        }
-        if (!keyH.skillW) {
-            hasAttackedW = false;
+            keyH.skillW = false; // Reset the skill key after use
         }
 
         // Movement input aggregated
@@ -421,17 +413,17 @@ public class Player {
         if (keyH.skillE) {
             state = ATTACKING;
             useSkillE();
-            keyH.skillE = false;
+            keyH.skillE = false; // Reset to prevent continuous skill use
         }
         if (keyH.skillR) {
             state = ATTACKING;
             useSkillR();
-            keyH.skillR = false;
+            keyH.skillR = false; // Reset to prevent continuous skill use
         }
         if (keyH.skillT) {
             state = ATTACKING;
             useSkillT();
-            keyH.skillT = false;
+            keyH.skillT = false; // Reset to prevent continuous skill use
         }
     }
 
