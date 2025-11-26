@@ -4,6 +4,8 @@ import javax.swing.*;
 import java.awt.*;
 import entities.GameLandingPage;
 import entities.StoryScreen; 
+import entities.GameOverScreen;
+import java.awt.image.BufferedImage; // Import for BufferedImage
 
 public class Main {
     private static JFrame window;
@@ -12,6 +14,7 @@ public class Main {
     private static GameLoop gameLoop;
     private static GameLandingPage landingPage; 
     private static StoryScreen storyScreen; 
+    private static GameOverScreen gameOverScreen;
 
     public static void main(String[] args) {
         window = new JFrame("Blade Quest");
@@ -20,11 +23,13 @@ public class Main {
 
         landingPage = new GameLandingPage(Main::showStoryScreen);
         storyScreen = new StoryScreen(Main::startGame); // Use the refactored StoryScreen
-        gameLoop = new GameLoop();
+        gameLoop = new GameLoop(Main::showGameOverScreenWithScreenshot); // Pass a callback for game over with screenshot
+        gameOverScreen = new GameOverScreen(Main::resetGame); // Pass a callback for continue
 
         mainPanel.add(landingPage, "LANDING");
         mainPanel.add(storyScreen, "STORY");
         mainPanel.add(gameLoop, "GAME");
+        mainPanel.add(gameOverScreen, "GAME_OVER");
 
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         window.setResizable(false);
@@ -49,6 +54,26 @@ public class Main {
             cardLayout.show(mainPanel, "GAME");
             gameLoop.requestFocusInWindow();
             gameLoop.start();
+            new FadeTransition(window, FadeTransition.FadeType.FADE_IN, null);
+        });
+    }
+
+    // Modified callback to accept screenshot
+    public static void showGameOverScreenWithScreenshot(BufferedImage screenshot) {
+        gameOverScreen.setBackgroundImage(screenshot); // Set the screenshot as background
+        new FadeTransition(window, FadeTransition.FadeType.FADE_OUT, () -> {
+            cardLayout.show(mainPanel, "GAME_OVER");
+            gameOverScreen.requestFocusInWindow();
+            new FadeTransition(window, FadeTransition.FadeType.FADE_IN, null);
+        });
+    }
+
+    public static void resetGame() {
+        new FadeTransition(window, FadeTransition.FadeType.FADE_OUT, () -> {
+            gameLoop.reset(); // Reset game state
+            cardLayout.show(mainPanel, "GAME");
+            gameLoop.requestFocusInWindow();
+            gameLoop.start(); // Restart the game loop if needed, or ensure it continues
             new FadeTransition(window, FadeTransition.FadeType.FADE_IN, null);
         });
     }

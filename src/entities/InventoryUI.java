@@ -446,4 +446,30 @@ public class InventoryUI extends JPanel {
     public List<Slot> getInventorySlots() {
         return inventorySlots;
     }
+
+    public void reset() {
+        // Clear inventory and equipment
+        for (Slot s : inventorySlots) {
+            s.item = null;
+            s.amount = 0;
+        }
+        for (Slot s : equipmentSlots.values()) {
+            s.item = null;
+            s.amount = 0;
+        }
+        // Re-add initial items
+        addItemToInventory(cloneItem("flamebrand"));
+        addItemToInventory(cloneItem("sword"));
+        addItemToInventory(cloneItem("potion_red"), 3);
+        addItemToInventory(cloneItem("ring_green"));
+        
+        // Reset selected slot and detail area
+        selectedSlot = null;
+        updateDetail(); // Update to "No item selected"
+        
+        // Refresh UI
+        refreshGrid();
+        refreshEquipmentPanel();
+        updatePlayerStats(); // Ensure player stats are reset to base or equipped from reset inventory
+    }
 }

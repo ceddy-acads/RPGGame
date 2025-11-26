@@ -26,6 +26,10 @@ public class Player {
 
     // Player stats
     private int baseAttack = 100;
+
+    // Initial position for respawn
+    private final int initialX;
+    private final int initialY;
     private int baseDefense = 5;
     private int equippedAttack = 0;
     private int equippedDefense = 0;
@@ -121,16 +125,33 @@ public class Player {
         }
     }
 
-    public Player(int startX, int startY, KeyHandler keyH, Map map) { // Modified constructor
+    public Player(int startX, int startY, KeyHandler keyH, Map map) { 
+        this.initialX = startX; // Store initial X
+        this.initialY = startY; // Store initial Y
         this.keyH = keyH;
-        this.currentMap = map; // Store map reference
+        this.currentMap = map; 
         this.px = startX;
         this.py = startY;
         this.speed = 4.0;
-        this.hp = 100;
-        loadFrames();  // Load all frames, including idle and die frames
-        currentImg = idleFrames[DOWN][0];  // Start with idle image
-        // Initial facing based on keyH is removed, will be set by movement
+        this.hp = maxHp; // Start with full HP
+        this.alive = true;
+        this.state = IDLE;
+        this.deathAnimationFinished = false;
+        loadFrames();  
+        currentImg = idleFrames[DOWN][0];  
+    }
+
+    public void resetPlayerState() {
+        this.px = initialX;
+        this.py = initialY;
+        this.hp = maxHp;
+        this.alive = true;
+        this.state = IDLE;
+        this.deathAnimationFinished = false;
+        this.qCooldown = 0;
+        this.wCooldown = 0;
+        this.slashes.clear();
+        this.skillWAttacks.clear();
     }
 
     // Load frames for 4 directions and reuse for diagonals if needed
@@ -519,6 +540,11 @@ public class Player {
     public boolean isAlive() {
         return alive;
     }
+
+    public boolean isDeathAnimationFinished() {
+        return deathAnimationFinished;
+    }
+
     public void useSkillE() { System.out.println("Skill E used"); }
     public void useSkillR() { System.out.println("Skill R used"); }
     public void useSkillT() { System.out.println("Skill T used"); }
