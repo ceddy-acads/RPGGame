@@ -11,7 +11,7 @@ public class KeyHandler implements KeyListener {
     public boolean upPressed, downPressed, leftPressed, rightPressed;
 
     // Skill keys
-    public boolean skillSPACE, skillW, skillE, skillR, skillT;
+    public boolean skillSPACE, skillW, skillB, skillN, skillM;
 
     // Debounce mechanism as a fallback
     private Map<Integer, Long> lastPressTime = new HashMap<>();  // Key: keyCode, Value: last press time
@@ -36,14 +36,14 @@ public class KeyHandler implements KeyListener {
             case KeyEvent.VK_SPACE:
                 skillSPACE = true;
                 break;
-            case KeyEvent.VK_E:
-                skillE = true;
+            case KeyEvent.VK_B:
+                skillB = true;
                 break;
-            case KeyEvent.VK_R:
-                skillR = true;
+            case KeyEvent.VK_N:
+                skillN = true;
                 break;
-            case KeyEvent.VK_T:
-                skillT = true;
+            case KeyEvent.VK_M:
+                skillM = true;
                 break;
         }
     }
@@ -61,9 +61,9 @@ public class KeyHandler implements KeyListener {
 
             // Skills
             case KeyEvent.VK_SPACE: skillSPACE= false; break;
-            case KeyEvent.VK_E: skillE = false; break;
-            case KeyEvent.VK_R: skillR = false; break;
-            case KeyEvent.VK_T: skillT = false; break;
+            case KeyEvent.VK_B: skillB = false; break;
+            case KeyEvent.VK_N: skillN = false; break;
+            case KeyEvent.VK_M: skillM = false; break;
         }
     }
 }

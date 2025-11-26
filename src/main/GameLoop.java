@@ -261,8 +261,30 @@ public class GameLoop extends JLayeredPane implements Runnable {
 
         // Draw hotbar
         hotbar.draw(g2d);
+        drawHotbarKeys(g2d);
         // Do not dispose g2d here as JLayeredPane might manage its own children's painting.
         // The dispose will be called automatically by the Swing system.
+    }
+
+    private void drawHotbarKeys(Graphics2D g2d) {
+        g2d.setColor(Color.WHITE);
+        g2d.setFont(new Font("Arial", Font.BOLD, 12));
+
+        int slotSize = 48;
+        int numSlots = 5;
+        int hotbarWidth = numSlots * slotSize;
+        int hotbarX = (WIDTH - hotbarWidth) / 2;
+        int hotbarY = HEIGHT - slotSize - 10;
+
+        String[] keys = {"", "", "B", "N", "M"}; 
+        for (int i = 2; i < numSlots; i++) {
+            String key = keys[i];
+            FontMetrics fm = g2d.getFontMetrics();
+            int stringWidth = fm.stringWidth(key);
+            int x = hotbarX + i * slotSize + (slotSize - stringWidth) / 2;
+            int y = hotbarY - 5; 
+            g2d.drawString(key, x, y);
+        }
     }
 
     // Define a functional interface for the game over callback

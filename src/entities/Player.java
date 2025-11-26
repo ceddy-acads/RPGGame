@@ -46,6 +46,7 @@ public class Player {
     private static final int ATTACKING = 2;
     private static final int DYING = 3;
     private static final int HURT = 4; // New state for taking damage
+    private static final int FIRESPLASH = 5;
     private int state = IDLE;  // Start in idle state
 
     // Animation frames [direction][frameIndex]
@@ -54,6 +55,7 @@ public class Player {
     private Image[][] attackFrames;
     private Image[][] idleFrames;
     private Image[][] hurtFrames;
+    private Image[][] firesplashFrames;
     private Image currentImg;  // General image
     private int deathDirection = DOWN;
     private int frameIndex = 0;        // Default for walking
@@ -74,8 +76,8 @@ public class Player {
     private int currentDirection = DOWN;
     
     // Player dimensions for collision
-    public final int playerWidth = 80; // Increased width to match TILE_SIZE
-    public final int playerHeight = 80; // Increased height to match TILE_SIZE
+    public final int playerWidth = 64; // Reverted width to 64
+    public final int playerHeight = 64; // Rtverteed height to64
 
     // Slash attacks for SkillQ
     private final ArrayList<SlashAttack> slashes = new ArrayList<>();
@@ -243,6 +245,21 @@ public class Player {
         hurtFrames[UP_RIGHT] = hurtFrames[UP];
         hurtFrames[DOWN_LEFT] = hurtFrames[DOWN];
         hurtFrames[DOWN_RIGHT] = hurtFrames[DOWN];
+
+        firesplashFrames = new Image[8][6]; // Corrected to 6 frames per direction
+        BufferedImage firesplashSpriteSheet = loadSpriteSheet("/assets/characters/player_firesplash.png");
+        if (firesplashSpriteSheet != null) {
+            for (int i = 0; i < 6; i++) { // Corrected loop to 6 frames
+                firesplashFrames[DOWN][i] = getSubImage(firesplashSpriteSheet, i, 0);
+                firesplashFrames[LEFT][i] = getSubImage(firesplashSpriteSheet, i, 1);
+                firesplashFrames[RIGHT][i] = getSubImage(firesplashSpriteSheet, i, 2);
+                firesplashFrames[UP][i] = getSubImage(firesplashSpriteSheet, i, 3);
+            }
+            firesplashFrames[UP_LEFT] = firesplashFrames[LEFT];
+            firesplashFrames[UP_RIGHT] = firesplashFrames[RIGHT];
+            firesplashFrames[DOWN_LEFT] = firesplashFrames[LEFT];
+            firesplashFrames[DOWN_RIGHT] = firesplashFrames[RIGHT];
+        }
     }
     
     private BufferedImage loadSpriteSheet(String path) {
@@ -361,10 +378,13 @@ public class Player {
         }
         
         boolean isAttacking = !slashes.isEmpty() || !skillWAttacks.isEmpty();
-        if (isAttacking) {
-            state = ATTACKING;
-        } else {
-            if (dx != 0 || dy != 0) {
+        // Only update state if not in a non-interruptible state
+        if (state != FIRESPLASH && state != HURT && state != DYING) {
+            boolean isMoving = (dx != 0 || dy != 0);
+
+            if (isAttacking) {
+                state = ATTACKING;
+            } else if (isMoving) {
                 state = WALKING;
             } else {
                 state = IDLE;
@@ -398,8 +418,23 @@ public class Player {
 
         // Animation logic based on state
         switch (state) {
+            case FIRESPLASH:
+                accumulatedAnimationTime += deltaTime;
+                if (accumulatedAnimationTime >= playerFrameDuration) {
+                    frameIndex++;
+                    accumulatedAnimationTime -= playerFrameDuration;
+                    if (frameIndex >= 6) { // Corrected to 6 frames
+                        frameIndex = 0;
+                        state = IDLE;
+                    }
+                }
+                // Ensure frameIndex is within bounds before accessing array
+                if (frameIndex < 6) { // Corrected to 6 frames
+                    currentImg = firesplashFrames[currentDirection][frameIndex];
+                }
+                break;
             case HURT:
-                currentImg = hurtFrames[currentDirection][frameIndex];
+                // Similar logic as DYING and HURT at the top of update()
                 break;
             case ATTACKING:
                 accumulatedAnimationTime += deltaTime;
@@ -430,21 +465,20 @@ public class Player {
                 break;
         }
 
-        // Skills E/R/T — dummy for now
-        if (keyH.skillE) {
-            state = ATTACKING;
-            useSkillE();
-            keyH.skillE = false; // Reset to prevent continuous skill use
+        // Skills B/N/M
+        if (keyH.skillB) {
+            useSkillB();
+            keyH.skillB = false; // Reset to prevent continuous skill use
         }
-        if (keyH.skillR) {
+        if (keyH.skillN) {
             state = ATTACKING;
-            useSkillR();
-            keyH.skillR = false; // Reset to prevent continuous skill use
+            useSkillN();
+            keyH.skillN = false; // Reset to prevent continuous skill use
         }
-        if (keyH.skillT) {
+        if (keyH.skillM) {
             state = ATTACKING;
-            useSkillT();
-            keyH.skillT = false; // Reset to prevent continuous skill use
+            useSkillM();
+            keyH.skillM = false; // Reset to prevent continuous skill use
         }
     }
 
@@ -545,7 +579,11 @@ public class Player {
         return deathAnimationFinished;
     }
 
-    public void useSkillE() { System.out.println("Skill E used"); }
-    public void useSkillR() { System.out.println("Skill R used"); }
-    public void useSkillT() { System.out.println("Skill T used"); }
+    public void useSkillB() {
+        state = FIRESPLASH;
+        frameIndex = 0;
+        accumulatedAnimationTime = 0f;
+    }
+    public void useSkillN() { System.out.println("Skill N used"); }
+    public void useSkillM() { System.out.println("Skill M used"); }
 }
