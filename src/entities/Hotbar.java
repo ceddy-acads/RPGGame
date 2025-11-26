@@ -40,7 +40,7 @@ public class Hotbar {
         for (int i = 0; i < numSlots && i < slots.size(); i++) {
             InventoryUI.Slot slot = slots.get(i);
             if (slot.item != null) {
-                g2d.drawImage(slot.item.getIcon(), hotbarX + i * slotSize, hotbarY, slotSize, slotSize, null);
+                g2d.drawImage(slot.item.getIcon().getImage(), hotbarX + i * slotSize, hotbarY, slotSize, slotSize, null);
             }
         }
     }

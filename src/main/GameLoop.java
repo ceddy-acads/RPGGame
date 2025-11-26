@@ -58,7 +58,7 @@ public class GameLoop extends JLayeredPane implements Runnable {
         spawnEnemies();
 
         // Initialize inventory
-        gameInventory = new InventoryUI(player);
+        gameInventory = new InventoryUI(WIDTH, HEIGHT);
 
         // Initialize hotbar
         hotbar = new Hotbar(WIDTH, HEIGHT, gameInventory);

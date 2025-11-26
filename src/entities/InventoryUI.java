@@ -1,18 +1,16 @@
 package entities;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
+import javax.swing.border.*;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Arrays;
-import javax.imageio.ImageIO;
-import java.io.IOException;
+import java.awt.datatransfer.*;
+import java.awt.dnd.*;
+import java.awt.event.*;
+import java.util.*;
+import javax.swing.ImageIcon;
+import java.awt.image.BufferedImage;
 
-public class InventoryUI extends JPanel {
+public class InventoryUI extends JPanel { // Changed from JFrame
 
     enum ItemType { EQUIPMENT, CONSUMABLE, MATERIAL }
 
@@ -24,7 +22,6 @@ public class InventoryUI extends JPanel {
         String iconPath;
         Map<String, String> stats = new HashMap<>();
         int stack = 1;
-        private Image icon; // Cached image
 
         Item(String id, String name, ItemType type, String description, String iconPath) {
             this.id = id;
@@ -34,17 +31,12 @@ public class InventoryUI extends JPanel {
             this.iconPath = iconPath;
         }
 
-        Image getIcon() {
-            if (icon == null) {
-                try {
-                    icon = ImageIO.read(getClass().getResourceAsStream(iconPath));
-                } catch (IOException | IllegalArgumentException e) {
-                    System.err.println("Failed to load item icon: " + iconPath + " - " + e.getMessage());
-                    // Return a placeholder image or null
-                    return null;
-                }
+        ImageIcon getIcon() {
+            try {
+                return new ImageIcon(getClass().getResource(iconPath));
+            } catch (Exception e) {
+                return new ImageIcon(new BufferedImage(48, 48, BufferedImage.TYPE_INT_ARGB));
             }
-            return icon;
         }
     }
 
@@ -55,30 +47,46 @@ public class InventoryUI extends JPanel {
 
     private final int ROWS = 5;
     private final int COLS = 4;
-    private final int SLOT_SIZE = 48;
 
-    private List<Slot> inventorySlots = new ArrayList<>();
+    private java.util.List<Slot> inventorySlots = new ArrayList<>();
     private Map<String, Slot> equipmentSlots = new LinkedHashMap<>();
 
     private Slot selectedSlot = null;
-    
-    private JPanel gridPanel = new JPanel();
+
+    private JPanel gridPanel = new JPanel(new GridLayout(ROWS, COLS, 5, 5));
     private JPanel equipPanel = new JPanel();
     private JTextArea detailArea = new JTextArea();
     private JButton btnEquip = new JButton("EQUIP");
     private JButton btnUse = new JButton("USE");
     private JButton btnDrop = new JButton("DROP");
 
-    private List<Item> allItems = new ArrayList<>();
-    private Player player;
+    private java.util.List<Item> allItems = new ArrayList<>();
 
-    public InventoryUI(Player player) {
-        this.player = player;
-        setPreferredSize(new Dimension(800, 600));
-        setBackground(new Color(0, 0, 0, 180)); // Semi-transparent black
-        setBorder(BorderFactory.createLineBorder(Color.WHITE, 2));
-        setLayout(new BorderLayout(10, 10));
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+    // --- color palette (medieval parchment)
+    private final Color PARCHMENT = new Color(217,195,154);
+    private final Color PARCHMENT_DARK = new Color(200,175,130);
+    private final Color SLOT_BG = new Color(140,111,69);
+    private final Color SLOT_HOVER = new Color(160,130,85);
+    private final Color SLOT_BORDER = new Color(58,46,30);
+    private final Color SLOT_HIGHLIGHT = new Color(216,179,122);
+    private final Color TEXT_BROWN = new Color(59,47,35);
+    private final Color PANEL_BORDER = new Color(91,74,48);
+    private final Color BUTTON_BROWN = new Color(152,117,78);
+    private final Color BUTTON_DROP = new Color(168,92,61);
+    private final Color SELECT_BORDER = new Color(206,160,98);
+
+    // Modified constructor to match GameLoop's expectation
+    public InventoryUI(int screenWidth, int screenHeight) {
+        // Removed JFrame specific calls
+        setPreferredSize(new Dimension(screenWidth, screenHeight)); // Set preferred size
+        setBackground(PARCHMENT); // Set background for the JPanel
+        setLayout(new BorderLayout()); // Use BorderLayout for the main panel
+
+        // --- UIManager tab colors should be set BEFORE creating JTabbedPane
+        UIManager.put("TabbedPane.selected", PARCHMENT);
+        UIManager.put("TabbedPane.contentAreaColor", PARCHMENT_DARK);
+        UIManager.put("TabbedPane.unselectedBackground", new Color(160,135,100));
+        UIManager.put("TabbedPane.foreground", TEXT_BROWN);
 
         loadSampleItems();
 
@@ -96,63 +104,74 @@ public class InventoryUI extends JPanel {
         addItemToInventory(cloneItem("potion_red"), 3);
         addItemToInventory(cloneItem("ring_green"));
 
-        // Left Column (Equipment, Details, Buttons)
+        // JPanel root = new JPanel(new BorderLayout()); // No longer need a root panel, this JPanel is the root
+        // add(root);
+
+        // left column
         JPanel leftCol = new JPanel();
         leftCol.setLayout(new BoxLayout(leftCol, BoxLayout.Y_AXIS));
-        leftCol.setBorder(new EmptyBorder(10, 10, 10, 10));
-        leftCol.setPreferredSize(new Dimension(250, 0));
-        leftCol.setOpaque(false);
+        leftCol.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        leftCol.setPreferredSize(new Dimension(300, 600));
 
-        JLabel equipLabel = new JLabel("Equipment");
-        equipLabel.setFont(new Font("Serif", Font.BOLD, 20));
-        equipLabel.setForeground(Color.WHITE);
-        equipLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        
+        // style main panels with parchment colors
+        // root.setBackground(PARCHMENT); // Set background for this JPanel instead
+        leftCol.setBackground(PARCHMENT);
+        gridPanel.setBackground(PARCHMENT_DARK);
+        equipPanel.setBackground(PARCHMENT_DARK);
+
         equipPanel.setLayout(new BoxLayout(equipPanel, BoxLayout.Y_AXIS));
-        equipPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-        equipPanel.setOpaque(false);
+        equipPanel.setBorder(BorderFactory.createTitledBorder(new LineBorder(PANEL_BORDER, 2), "Equipment", 0, 0, new Font("Serif", Font.BOLD, 12), TEXT_BROWN));
+        refreshEquipmentPanel();
 
         detailArea.setEditable(false);
         detailArea.setLineWrap(true);
         detailArea.setWrapStyleWord(true);
-        detailArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        detailArea.setBackground(new Color(85, 85, 85));
-        detailArea.setForeground(Color.WHITE);
-        JScrollPane detailScrollPane = new JScrollPane(detailArea);
-        detailScrollPane.setPreferredSize(new Dimension(0, 150));
+        detailArea.setPreferredSize(new Dimension(280, 150));
+        detailArea.setBorder(BorderFactory.createTitledBorder(new LineBorder(PANEL_BORDER, 2), "Details", 0, 0, new Font("Serif", Font.BOLD, 12), TEXT_BROWN));
+        detailArea.setBackground(PARCHMENT);
+        detailArea.setForeground(TEXT_BROWN);
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
-        buttonPanel.setOpaque(false);
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 3, 5, 5));
+        buttonPanel.setBackground(PARCHMENT);
+        // style buttons
+        styleButton(btnEquip, BUTTON_BROWN);
+        styleButton(btnUse, new Color(155,134,78));
+        styleButton(btnDrop, BUTTON_DROP);
         buttonPanel.add(btnEquip);
         buttonPanel.add(btnUse);
         buttonPanel.add(btnDrop);
-        
-        leftCol.add(equipLabel);
-        leftCol.add(Box.createRigidArea(new Dimension(0, 5)));
-        leftCol.add(equipPanel);
-        leftCol.add(Box.createRigidArea(new Dimension(0, 10)));
-        leftCol.add(detailScrollPane);
-        leftCol.add(Box.createRigidArea(new Dimension(0, 10)));
-        leftCol.add(buttonPanel);
-        add(leftCol, BorderLayout.WEST);
 
-        // Right Content (Inventory Grid)
-        gridPanel.setLayout(new GridLayout(ROWS, COLS, 5, 5));
-        gridPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        gridPanel.setOpaque(false);
-        add(gridPanel, BorderLayout.CENTER);
+        leftCol.add(equipPanel);
+        leftCol.add(Box.createVerticalStrut(10));
+        leftCol.add(detailArea);
+        leftCol.add(Box.createVerticalStrut(10));
+        leftCol.add(buttonPanel);
+
+        // Create tabs (gridPanel placed inside)
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.setBackground(PARCHMENT);
+        tabs.addTab("Equipment", new JScrollPane(gridPanel));
+        tabs.addTab("Consumables", new JScrollPane(gridPanel));
+        tabs.addTab("Materials", new JScrollPane(gridPanel));
+
+        add(leftCol, BorderLayout.WEST); // Add to this JPanel
+        add(tabs, BorderLayout.CENTER);   // Add to this JPanel
 
         refreshGrid();
-        refreshEquipmentPanel();
 
         btnEquip.addActionListener(e -> equipItem());
         btnUse.addActionListener(e -> useItem());
         btnDrop.addActionListener(e -> dropItem());
-
-        setVisible(false); // Initially hidden
     }
 
-    public void refreshGrid() {
+    private void styleButton(JButton b, Color bg) {
+        b.setBackground(bg);
+        b.setForeground(Color.WHITE);
+        b.setFocusPainted(false);
+        b.setBorder(new LineBorder(PANEL_BORDER, 2));
+    }
+
+    private void refreshGrid() {
         gridPanel.removeAll();
         for (Slot slot : inventorySlots) {
             gridPanel.add(makeSlotComponent(slot));
@@ -161,110 +180,127 @@ public class InventoryUI extends JPanel {
         gridPanel.repaint();
     }
 
-    public void refreshEquipmentPanel() {
+    private void refreshEquipmentPanel() {
         equipPanel.removeAll();
-        for (Map.Entry<String, Slot> entry : equipmentSlots.entrySet()) {
-            String name = entry.getKey();
-            Slot slot = entry.getValue();
+        for (String name : equipmentSlots.keySet()) {
+            Slot slot = equipmentSlots.get(name);
+            JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            row.setBackground(PARCHMENT_DARK);
+            row.setBorder(new LineBorder(PANEL_BORDER, 2));
+            row.setMaximumSize(new Dimension(260, 50));
+            row.add(new JLabel(name + ":"));
+            JLabel icon = new JLabel();
+            icon.setPreferredSize(new Dimension(40, 40));
+            if (slot.item != null)
+                icon.setIcon(slot.item.getIcon());
+            row.add(icon);
 
-            JPanel rowLayout = new JPanel(new BorderLayout(5, 0));
-            rowLayout.setAlignmentX(Component.LEFT_ALIGNMENT);
-            rowLayout.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));
-            rowLayout.setOpaque(false);
-            
-            JLabel nameLabel = new JLabel(name + ":");
-            nameLabel.setForeground(Color.WHITE);
-            nameLabel.setFont(new Font("Serif", Font.BOLD, 14));
-            
-            JLabel iconLabel = new JLabel();
-            iconLabel.setPreferredSize(new Dimension(SLOT_SIZE, SLOT_SIZE));
-            if (slot.item != null && slot.item.getIcon() != null) {
-                iconLabel.setIcon(new ImageIcon(slot.item.getIcon().getScaledInstance(SLOT_SIZE, SLOT_SIZE, Image.SCALE_SMOOTH)));
-            }
-
-            rowLayout.add(nameLabel, BorderLayout.WEST);
-            rowLayout.add(iconLabel, BorderLayout.CENTER);
-            equipPanel.add(rowLayout);
-
-            rowLayout.addMouseListener(new java.awt.event.MouseAdapter() {
-                public void mouseClicked(java.awt.event.MouseEvent evt) {
+            row.addMouseListener(new MouseAdapter() {
+                public void mouseClicked(MouseEvent e) {
                     selectedSlot = slot;
+                    refreshGrid(); // to repaint selection on grid slots (and equipment visual if you wanted)
                     updateDetail();
                 }
+                public void mouseEntered(MouseEvent e) {
+                    row.setBackground(new Color(210,185,140));
+                }
+                public void mouseExited(MouseEvent e) {
+                    row.setBackground(PARCHMENT_DARK);
+                }
             });
+
+            equipPanel.add(row);
         }
         equipPanel.revalidate();
         equipPanel.repaint();
     }
-    
-    private JComponent makeSlotComponent(Slot slot) {
-        // Using a JLabel as a container. Could also use JLayeredPane for more complex rendering.
-        JLabel slotLabel = new JLabel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                // Background
-                g.setColor(new Color(85, 85, 85));
-                g.fillRect(0, 0, getWidth(), getHeight());
-                
-                // Border
-                g.setColor(Color.DARK_GRAY);
-                g.drawRect(0, 0, getWidth() - 1, getHeight() - 1);
 
-                // Item Icon
-                if (slot.item != null && slot.item.getIcon() != null) {
-                    Image icon = slot.item.getIcon();
-                    int iconSize = SLOT_SIZE - 8;
-                    g.drawImage(icon, 4, 4, iconSize, iconSize, null);
-                }
+    private JPanel makeSlotComponent(Slot slot) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(SLOT_BG);
+        panel.setPreferredSize(new Dimension(80, 80));
 
-                // Amount text
-                if (slot.amount > 1) {
-                    String amountStr = String.valueOf(slot.amount);
-                    g.setColor(Color.WHITE);
-                    g.setFont(new Font("Arial", Font.BOLD, 12));
-                    FontMetrics fm = g.getFontMetrics();
-                    int x = getWidth() - fm.stringWidth(amountStr) - 5;
-                    int y = getHeight() - fm.getDescent() - 2;
-                    g.drawString(amountStr, x, y);
-                }
-            }
-        };
+        // border: show selected border if this is selectedSlot
+        if (slot == selectedSlot) {
+            panel.setBorder(new LineBorder(SELECT_BORDER, 4));
+        } else {
+            panel.setBorder(new LineBorder(SLOT_BORDER, 3));
+        }
 
-        slotLabel.setPreferredSize(new Dimension(SLOT_SIZE, SLOT_SIZE));
-        slotLabel.setOpaque(false); // We are doing custom painting
+        JLabel img = new JLabel();
+        img.setHorizontalAlignment(SwingConstants.CENTER);
 
-        slotLabel.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
+        if (slot.item != null)
+            img.setIcon(slot.item.getIcon());
+
+        panel.add(img, BorderLayout.CENTER);
+
+        if (slot.amount > 1) {
+            JLabel count = new JLabel(String.valueOf(slot.amount));
+            count.setHorizontalAlignment(SwingConstants.CENTER);
+            count.setOpaque(false);
+            count.setForeground(Color.WHITE);
+            panel.add(count, BorderLayout.SOUTH);
+        }
+
+        panel.addMouseListener(new MouseAdapter() {
+            Color original = panel.getBackground();
+
+            public void mouseClicked(MouseEvent e) {
                 selectedSlot = slot;
                 updateDetail();
-                // Highlight selected slot
-                // This requires more complex state management, for now just updating details.
+                refreshGrid(); // redraw borders to show selection
+                refreshEquipmentPanel();
+            }
+
+            public void mouseEntered(MouseEvent e) {
+                panel.setBackground(SLOT_HOVER);
+            }
+
+            public void mouseExited(MouseEvent e) {
+                panel.setBackground(original);
             }
         });
 
-        return slotLabel;
-    }
-
-    private void swapItems(Slot target, Item itemToSwap) {
-        // Find the source slot of the itemToSwap
-        Slot source = null;
-        for (Slot s : inventorySlots) {
-            if (s.item != null && s.item.id.equals(itemToSwap.id)) {
-                source = s;
-                break;
+        // The TransferHandler and DropTarget setup needs to be compatible with how items are dragged and dropped.
+        // This might need further adjustments depending on the game's drag-and-drop implementation.
+        // For now, I'll keep them as they are from the original inventory.java.
+        panel.setTransferHandler(new TransferHandler("item") {
+            @Override
+            public int getSourceActions(JComponent c) {
+                return COPY_OR_MOVE;
             }
-        }
-        if (source == null) {
-            for (Slot s : equipmentSlots.values()) {
-                if (s.item != null && s.item.id.equals(itemToSwap.id)) {
-                    source = s;
-                    break;
+
+            @Override
+            protected Transferable createTransferable(JComponent c) {
+                if (selectedSlot != null && selectedSlot.item != null) {
+                    return new StringSelection(selectedSlot.item.id);
+                }
+                return null;
+            }
+        });
+
+
+        panel.setDropTarget(new DropTarget() {
+            public synchronized void drop(DropTargetDropEvent dtde) {
+                try {
+                    dtde.acceptDrop(DnDConstants.ACTION_MOVE);
+                    Object dropped = dtde.getTransferable().getTransferData(DataFlavor.stringFlavor);
+                    swapItems(slot, (String)dropped);
+                    refreshGrid();
+                    refreshEquipmentPanel();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
             }
-        }
+        });
 
-        if (source == null) return; // Item not found
+        return panel;
+    }
+
+    private void swapItems(Slot target, String itemId) {
+        Slot source = findSlotByItemId(itemId);
+        if (source == null) return;
 
         Item tmp = target.item;
         int tmpAmt = target.amount;
@@ -275,7 +311,30 @@ public class InventoryUI extends JPanel {
         source.item = tmp;
         source.amount = tmpAmt;
     }
-    
+
+    private Slot findSlotByItemId(String id) {
+        for (Slot s : inventorySlots)
+            if (s.item != null && s.item.id.equals(id))
+                return s;
+
+        for (Slot s : equipmentSlots.values())
+            if (s.item != null && s.item.id.equals(id))
+                return s;
+
+        return null;
+    }
+
+    public void reset() {
+        // This method was added in the previous fix and needs to be implemented.
+        // For this new inventory UI, we can reset selected slot and refresh panels.
+        selectedSlot = null;
+        updateDetail(); // Clear details
+        refreshGrid();
+        refreshEquipmentPanel();
+        // You might also want to clear inventory/equipment contents here if 'reset' means starting fresh.
+        // For now, assume it just resets the UI state.
+    }
+
     private void updateDetail() {
         detailArea.setText("");
         if (selectedSlot == null || selectedSlot.item == null) {
@@ -287,15 +346,13 @@ public class InventoryUI extends JPanel {
         }
 
         Item it = selectedSlot.item;
-        StringBuilder sb = new StringBuilder();
-        sb.append(it.name).append("\n");
-        sb.append(it.type).append("\n\n");
-        sb.append(it.description).append("\n\n");
+        detailArea.append(it.name + "\n");
+        detailArea.append(it.type + "\n\n");
+        detailArea.append(it.description + "\n\n");
 
         for (var e : it.stats.entrySet()) {
-            sb.append(e.getKey()).append(": ").append(e.getValue()).append("\n");
+            detailArea.append(e.getKey() + ": " + e.getValue() + "\n");
         }
-        detailArea.setText(sb.toString());
 
         btnEquip.setEnabled(it.type == ItemType.EQUIPMENT);
         btnUse.setEnabled(it.type == ItemType.CONSUMABLE);
@@ -303,173 +360,104 @@ public class InventoryUI extends JPanel {
     }
 
     private void equipItem() {
-        if (selectedSlot == null || selectedSlot.item == null || selectedSlot.item.type != ItemType.EQUIPMENT) return;
+        if (selectedSlot == null || selectedSlot.item == null) return;
         Item it = selectedSlot.item;
 
-        // This is a simplified logic. A real system would check item subtypes (e.g., helmet, chestplate).
-        String targetSlotName = "Weapon"; // default
-        if (it.name.toLowerCase().contains("ring")) targetSlotName = "Ring";
-        else if (it.name.toLowerCase().contains("sword") || it.name.toLowerCase().contains("brand")) targetSlotName = "Weapon";
-        // Add more else-if for Head, Chest etc.
+        String target = "Weapon"; // Default target
+        if (it.name.toLowerCase().contains("ring")) target = "Ring";
+        else if (it.type == ItemType.EQUIPMENT) {
+            // Need a more robust way to determine head/chest slots
+            // For now, just allow "Weapon" and "Ring" from example
+            // If it's a generic equipment and not a ring/weapon, where should it go?
+            // This logic needs to be expanded based on actual item types and equipment slots.
+            System.out.println("Cannot equip item of type " + it.name + " to a specific slot yet.");
+            return;
+        } else {
+             System.out.println("Cannot equip non-equipment item.");
+             return;
+        }
 
-        Slot eqSlot = equipmentSlots.get(targetSlotName);
-        if (eqSlot == null) {
-            System.err.println("No equipment slot found for: " + targetSlotName);
+
+        Slot eq = equipmentSlots.get(target);
+        if (eq == null) {
+            System.out.println("Equipment slot " + target + " not found.");
             return;
         }
-        
-        // Swap items
-        Item oldItem = eqSlot.item;
-        int oldAmt = eqSlot.amount;
 
-        eqSlot.item = it;
-        eqSlot.amount = selectedSlot.amount;
+        Item old = eq.item;
+        int oldAmt = eq.amount;
 
-        selectedSlot.item = oldItem;
+        eq.item = it;
+        eq.amount = selectedSlot.amount;
+
+        selectedSlot.item = old;
         selectedSlot.amount = oldAmt;
 
         refreshGrid();
         refreshEquipmentPanel();
         updateDetail();
-        updatePlayerStats();
     }
 
     private void useItem() {
-        if (selectedSlot == null || selectedSlot.item == null || selectedSlot.item.type != ItemType.CONSUMABLE) return;
-
-        // Add logic for item effect here (e.g., player.heal(50))
-        System.out.println("Used " + selectedSlot.item.name);
+        if (selectedSlot == null || selectedSlot.item == null) return;
+        if (selectedSlot.item.type != ItemType.CONSUMABLE) return;
 
         selectedSlot.amount--;
-        if (selectedSlot.amount <= 0) {
-            selectedSlot.item = null;
-        }
+        if (selectedSlot.amount <= 0) selectedSlot.item = null;
 
         refreshGrid();
         updateDetail();
     }
 
     private void dropItem() {
-        if (selectedSlot == null || selectedSlot.item == null) return;
-        
-        System.out.println("Dropped " + selectedSlot.item.name);
-
+        if (selectedSlot == null) return;
         selectedSlot.item = null;
         selectedSlot.amount = 0;
 
         refreshGrid();
-        refreshEquipmentPanel(); // In case it was an equipment slot
+        refreshEquipmentPanel();
         updateDetail();
-        updatePlayerStats();
-    }
-    
-    private void updatePlayerStats() {
-        int totalAttack = 0;
-        int totalDefense = 0;
-        for (Slot slot : equipmentSlots.values()) {
-            if (slot.item != null) {
-                String damageString = slot.item.stats.getOrDefault("Damage", "0");
-                if (damageString.contains("–")) {
-                    damageString = damageString.split("–")[0].trim();
-                }
-                try {
-                    totalAttack += Integer.parseInt(damageString);
-                } catch (NumberFormatException e) {
-                    System.err.println("Could not parse damage stat for item: " + slot.item.name);
-                }
-                
-                String defenseString = slot.item.stats.getOrDefault("Defense", "0");
-                try {
-                    totalDefense += Integer.parseInt(defenseString);
-                } catch (NumberFormatException e) {
-                    System.err.println("Could not parse defense stat for item: " + slot.item.name);
-                }
-            }
-        }
-        player.setEquippedStats(totalAttack, totalDefense);
-        System.out.println("Player stats updated. Attack: " + player.getTotalAttack() + ", Defense: " + player.getTotalDefense());
     }
 
     private void loadSampleItems() {
-        Item sword = new Item("sword", "Short Sword", ItemType.EQUIPMENT, "A basic sword", "/assets/ui/sword.png");
-        sword.stats.put("Damage", "10");
+        Item sword = new Item("sword", "Short Sword", ItemType.EQUIPMENT, "A basic sword", "/icons/sword.png");
+        sword.stats.put("Damage", "6–10");
 
-        Item flame = new Item("flamebrand", "Flamebrand", ItemType.EQUIPMENT, "Adds fire damage over time.", "/assets/ui/sword.png");
-        flame.stats.put("Damage", "25");
-        flame.stats.put("Defense", "5");
+        Item flame = new Item("flamebrand", "Flamebrand", ItemType.EQUIPMENT, "Adds fire damage over time.", "/icons/flame_sword.png");
+        flame.stats.put("Damage", "34–52");
 
-        Item potion = new Item("potion_red", "Health Potion", ItemType.CONSUMABLE, "Restores health", "/assets/ui/story1.png");
+        Item potion = new Item("potion_red", "Health Potion", ItemType.CONSUMABLE, "Restores health", "/icons/potion_red.png");
         potion.stack = 10;
 
-        Item ring = new Item("ring_green", "Emerald Ring", ItemType.EQUIPMENT, "A shiny ring", "/assets/ui/clouds.png");
-        ring.stats.put("Defense", "2");
+        Item ring = new Item("ring_green", "Emerald Ring", ItemType.EQUIPMENT, "A shiny ring", "/icons/ring.png");
 
         allItems.addAll(Arrays.asList(sword, flame, potion, ring));
     }
 
     private Item cloneItem(String id) {
-        for (Item it : allItems) {
+        for (Item it : allItems)
             if (it.id.equals(id)) {
                 Item c = new Item(it.id, it.name, it.type, it.description, it.iconPath);
                 c.stats.putAll(it.stats);
                 c.stack = it.stack;
                 return c;
             }
-        }
         return null;
     }
 
     private void addItemToInventory(Item item) { addItemToInventory(item, 1); }
 
     private void addItemToInventory(Item item, int amt) {
-        if (item == null) return;
-        // Try to stack with existing items
-        if (item.stack > 1) {
-            for (Slot s : inventorySlots) {
-                if (s.item != null && s.item.id.equals(item.id) && s.amount < s.item.stack) {
-                    s.amount += amt;
-                    // Handle overflow if needed
-                    return;
-                }
-            }
-        }
-        // Add to new slot
-        for (Slot s : inventorySlots) {
+        for (Slot s : inventorySlots)
             if (s.item == null) {
                 s.item = item;
                 s.amount = amt;
                 return;
             }
-        }
     }
 
-    public List<Slot> getInventorySlots() {
+    // Public getter for inventorySlots, required by Hotbar
+    public java.util.List<Slot> getInventorySlots() {
         return inventorySlots;
-    }
-
-    public void reset() {
-        // Clear inventory and equipment
-        for (Slot s : inventorySlots) {
-            s.item = null;
-            s.amount = 0;
-        }
-        for (Slot s : equipmentSlots.values()) {
-            s.item = null;
-            s.amount = 0;
-        }
-        // Re-add initial items
-        addItemToInventory(cloneItem("flamebrand"));
-        addItemToInventory(cloneItem("sword"));
-        addItemToInventory(cloneItem("potion_red"), 3);
-        addItemToInventory(cloneItem("ring_green"));
-        
-        // Reset selected slot and detail area
-        selectedSlot = null;
-        updateDetail(); // Update to "No item selected"
-        
-        // Refresh UI
-        refreshGrid();
-        refreshEquipmentPanel();
-        updatePlayerStats(); // Ensure player stats are reset to base or equipped from reset inventory
     }
 }
