@@ -47,6 +47,7 @@ public class Player {
     private static final int DYING = 3;
     private static final int HURT = 4; // New state for taking damage
     private static final int FIRESPLASH = 5;
+    private static final int ICEPIERCER = 6; // New state for Ice Piercer skill
     private int state = IDLE;  // Start in idle state
 
     // Animation frames [direction][frameIndex]
@@ -56,6 +57,7 @@ public class Player {
     private Image[][] idleFrames;
     private Image[][] hurtFrames;
     private Image[][] firesplashFrames;
+    private Image[][] icepiercerFrames; // New array for Ice Piercer animation frames
     private Image currentImg;  // General image
     private int deathDirection = DOWN;
     private int frameIndex = 0;        // Default for walking
@@ -257,8 +259,23 @@ public class Player {
             }
             firesplashFrames[UP_LEFT] = firesplashFrames[LEFT];
             firesplashFrames[UP_RIGHT] = firesplashFrames[RIGHT];
-            firesplashFrames[DOWN_LEFT] = firesplashFrames[LEFT];
-            firesplashFrames[DOWN_RIGHT] = firesplashFrames[RIGHT];
+        firesplashFrames[DOWN_LEFT] = firesplashFrames[LEFT];
+        firesplashFrames[DOWN_RIGHT] = firesplashFrames[RIGHT];
+        }
+
+        icepiercerFrames = new Image[8][6];
+        BufferedImage icepiercerSpriteSheet = loadSpriteSheet("/assets/characters/player_icepiercer.png");
+        if (icepiercerSpriteSheet != null) {
+            for (int i = 0; i < 6; i++) {
+                icepiercerFrames[DOWN][i] = getSubImage(icepiercerSpriteSheet, i, 0);
+                icepiercerFrames[LEFT][i] = getSubImage(icepiercerSpriteSheet, i, 1);
+                icepiercerFrames[RIGHT][i] = getSubImage(icepiercerSpriteSheet, i, 2);
+                icepiercerFrames[UP][i] = getSubImage(icepiercerSpriteSheet, i, 3);
+            }
+            icepiercerFrames[UP_LEFT] = icepiercerFrames[LEFT];
+            icepiercerFrames[UP_RIGHT] = icepiercerFrames[RIGHT];
+            icepiercerFrames[DOWN_LEFT] = icepiercerFrames[LEFT];
+            icepiercerFrames[DOWN_RIGHT] = icepiercerFrames[RIGHT];
         }
     }
     
@@ -379,7 +396,7 @@ public class Player {
         
         boolean isAttacking = !slashes.isEmpty() || !skillWAttacks.isEmpty();
         // Only update state if not in a non-interruptible state
-        if (state != FIRESPLASH && state != HURT && state != DYING) {
+        if (state != FIRESPLASH && state != HURT && state != DYING && state != ICEPIERCER) {
             boolean isMoving = (dx != 0 || dy != 0);
 
             if (isAttacking) {
@@ -418,6 +435,20 @@ public class Player {
 
         // Animation logic based on state
         switch (state) {
+            case ICEPIERCER:
+                accumulatedAnimationTime += deltaTime;
+                if (accumulatedAnimationTime >= playerFrameDuration) {
+                    frameIndex++;
+                    accumulatedAnimationTime -= playerFrameDuration;
+                    if (frameIndex >= 6) { // Ice Piercer has 6 frames
+                        frameIndex = 0;
+                        state = IDLE;
+                    }
+                }
+                if (frameIndex < 6) {
+                    currentImg = icepiercerFrames[currentDirection][frameIndex];
+                }
+                break;
             case FIRESPLASH:
                 accumulatedAnimationTime += deltaTime;
                 if (accumulatedAnimationTime >= playerFrameDuration) {
@@ -471,7 +502,6 @@ public class Player {
             keyH.skillB = false; // Reset to prevent continuous skill use
         }
         if (keyH.skillN) {
-            state = ATTACKING;
             useSkillN();
             keyH.skillN = false; // Reset to prevent continuous skill use
         }
@@ -584,6 +614,10 @@ public class Player {
         frameIndex = 0;
         accumulatedAnimationTime = 0f;
     }
-    public void useSkillN() { System.out.println("Skill N used"); }
+    public void useSkillN() { 
+        state = ICEPIERCER;
+        frameIndex = 0;
+        accumulatedAnimationTime = 0f;
+    }
     public void useSkillM() { System.out.println("Skill M used"); }
 }
