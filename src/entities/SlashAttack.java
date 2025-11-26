@@ -51,9 +51,11 @@ public class SlashAttack {
         this.x = x;
         this.y = y;
         this.direction = direction;
-        // Randomize damage: ±20% variation
-        double variation = 0.8 + Math.random() * 0.4;
-        this.damage = Math.max(1, (int)(playerAttack * variation));
+        // Randomize damage: between 5 and playerAttack + 20%
+        // Ensure minimum damage is 5
+        int minDamage = 5;
+        int maxDamage = (int)(playerAttack * 1.2); // PlayerAttack + 20%
+        this.damage = minDamage + (int)(Math.random() * (maxDamage - minDamage + 1));
 
         this.secondsPerFrame = (float) frameDelay / 60.0f;
 

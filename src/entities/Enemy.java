@@ -208,7 +208,12 @@ public class Enemy {
                 attackFrame = 0;
                 attackCooldown = 90; 
                 System.out.println("Enemy Attacking!");
-                player.takeDamage(attackDamage); // Deal damage at the start of the attack animation
+                // Randomize enemy attack damage with a minimum of 5
+                Random rand = new Random();
+                int minEnemyDamage = 5;
+                int maxEnemyDamage = attackDamage + 5; // e.g., if base attackDamage is 10, max will be 15
+                int randomizedDamage = minEnemyDamage + rand.nextInt(maxEnemyDamage - minEnemyDamage + 1);
+                player.takeDamage(randomizedDamage); // Deal randomized damage at the start of the attack animation
             }
 
             if (attacking) {
