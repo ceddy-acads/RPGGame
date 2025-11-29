@@ -1,0 +1,8 @@
+# Simple Tile Configuration - Edit only tiles 0,1,2 here
+# Format: tileID,imagePath,collision(0/1),name
+0,/assets/tiles/grass00.png,0,Grass
+1,/assets/tiles/wall.png,1,Wall
+2,/assets/tiles/water01.png,1,Water
+3,/assets/tiles/earth.png,0,Earth
+4,/assets/tiles/floor01.png,0,Floor
+5,/assets/tiles/hut.png,1,Hut
