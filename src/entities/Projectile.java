@@ -22,7 +22,7 @@ public class Projectile {
             sprite = ImageIO.read(getClass().getResourceAsStream("/sprites/fireball.png"));
         } catch (IOException e) {
             e.printStackTrace();
-            System.out.println("⚠️ Fireball sprite not found!");
+            System.out.println("Warning: Fireball sprite not found!");
         }
     }
 

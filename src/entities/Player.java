@@ -4,7 +4,7 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import javax.swing.ImageIcon;
 import input.KeyHandler;
-import maps.Map; 
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.awt.image.BufferedImage;
@@ -16,6 +16,10 @@ public class Player {
     private final int Q_COOLDOWN_MAX = 30; // 30 frames = 0.5 sec at 60FPS
     private int wCooldown = 0;
     private final int W_COOLDOWN_MAX = 60; // 1 sec
+    private int bCooldown = 0;
+    private final int B_COOLDOWN_MAX = 300; // 5 sec
+    private int nCooldown = 0;
+    private final int N_COOLDOWN_MAX = 300; // 5 sec
 
     //HP of the character
     private int maxHp = 100;
@@ -38,7 +42,7 @@ public class Player {
     public double px, py; // Made public for direct access in GameLoop for camera
     private double speed;
     private KeyHandler keyH;
-    private Map currentMap; // Reference to the current map for collision
+    private Object tileManager; // Reference to TileManager for collision
 
     // State constants
     private static final int IDLE = 0;
@@ -78,13 +82,16 @@ public class Player {
     private int currentDirection = DOWN;
     
     // Player dimensions for collision
-    public final int playerWidth = 64; // Reverted width to 64
-    public final int playerHeight = 64; // Rtverteed height to64
+    public final int playerWidth = 64;
+    public final int playerHeight = 64;
 
     // Slash attacks for SkillQ
     private final ArrayList<SlashAttack> slashes = new ArrayList<>();
     // SkillW attacks
     private final ArrayList<SkillWAttack> skillWAttacks = new ArrayList<>();
+
+    // Freeze skill area
+    private Rectangle freezeArea = null;
 
     public ArrayList<SlashAttack> getSlashes() {
         return slashes;
@@ -129,11 +136,10 @@ public class Player {
         }
     }
 
-    public Player(int startX, int startY, KeyHandler keyH, Map map) { 
+    public Player(int startX, int startY, KeyHandler keyH) {
         this.initialX = startX; // Store initial X
         this.initialY = startY; // Store initial Y
         this.keyH = keyH;
-        this.currentMap = map; 
         this.px = startX;
         this.py = startY;
         this.speed = 4.0;
@@ -141,8 +147,8 @@ public class Player {
         this.alive = true;
         this.state = IDLE;
         this.deathAnimationFinished = false;
-        loadFrames();  
-        currentImg = idleFrames[DOWN][0];  
+        loadFrames();
+        currentImg = idleFrames[DOWN][0];
     }
 
     public void resetPlayerState() {
@@ -154,6 +160,8 @@ public class Player {
         this.deathAnimationFinished = false;
         this.qCooldown = 0;
         this.wCooldown = 0;
+        this.bCooldown = 0;
+        this.nCooldown = 0;
         this.slashes.clear();
         this.skillWAttacks.clear();
     }
@@ -348,6 +356,8 @@ public class Player {
 
         if (qCooldown > 0) qCooldown--;
         if (wCooldown > 0) wCooldown--;
+        if (bCooldown > 0) bCooldown--;
+        if (nCooldown > 0) nCooldown--;
 
         // --- Q Attack: cooldown-limited, one press = one attack ---
         if (keyH.skillSPACE && qCooldown == 0) { // Changed to skillSPACE
@@ -363,6 +373,20 @@ public class Player {
             keyH.skillW = false; // Reset the skill key after use
         }
 
+        // --- B Attack: cooldown-limited, one press = one attack ---
+        if (keyH.skillB && bCooldown == 0) {
+            useSkillB();
+            bCooldown = B_COOLDOWN_MAX;
+            keyH.skillB = false; // Reset to prevent continuous skill use
+        }
+
+        // --- N Attack: cooldown-limited, one press = one attack ---
+        if (keyH.skillN && nCooldown == 0) {
+            useSkillN();
+            nCooldown = N_COOLDOWN_MAX;
+            keyH.skillN = false; // Reset to prevent continuous skill use
+        }
+
         // Movement input aggregated
         double dx = 0.0, dy = 0.0;
         if (keyH.upPressed) dy -= speed;
@@ -376,22 +400,27 @@ public class Player {
             dy *= 0.7071067811865476;
         }
 
-        // Apply movement with collision detection
-        int nextX = (int) (px + dx);
-        int nextY = (int) (py + dy);
-
-        // Check horizontal movement
-        if (dx != 0) {
-            if (currentMap.isWalkable(nextX, (int) py, playerWidth, playerHeight)) {
-                px += dx;
+        // Apply movement with tile collision detection
+        if (tileManager != null) {
+            // Try horizontal movement
+            double proposedX = px + dx;
+            int topLeftX = (int) Math.round(proposedX - playerWidth / 2.0);
+            int topLeftY = (int) Math.round(py - playerHeight / 2.0);
+            if (((tile.TileManager) tileManager).isWalkable(topLeftX, topLeftY, playerWidth, playerHeight)) {
+                px = proposedX;
             }
-        }
 
-        // Check vertical movement
-        if (dy != 0) {
-            if (currentMap.isWalkable((int) px, nextY, playerWidth, playerHeight)) {
-                py += dy;
+            // Try vertical movement
+            double proposedY = py + dy;
+            topLeftX = (int) Math.round(px - playerWidth / 2.0);
+            topLeftY = (int) Math.round(proposedY - playerHeight / 2.0);
+            if (((tile.TileManager) tileManager).isWalkable(topLeftX, topLeftY, playerWidth, playerHeight)) {
+                py = proposedY;
             }
+        } else {
+            // No tile manager, free movement
+            px += dx;
+            py += dy;
         }
         
         boolean isAttacking = !slashes.isEmpty() || !skillWAttacks.isEmpty();
@@ -543,6 +572,16 @@ public class Player {
             g2.fillRect(drawX, drawY, 32, 32);
         }
 
+        // Draw name above HP bar
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 12));
+        FontMetrics fm = g.getFontMetrics();
+        String name = "Kael";
+        int textWidth = fm.stringWidth(name);
+        int textX = drawX + (width - textWidth) / 2;
+        int textY = drawY - 15;
+        g.drawString(name, textX, textY);
+
         // Draw HP bar above player
         g.setColor(Color.GRAY);
         g.fillRect(drawX, drawY - 10, width, 5);
@@ -609,15 +648,49 @@ public class Player {
         return deathAnimationFinished;
     }
 
+    public Rectangle getFreezeArea() {
+        return freezeArea;
+    }
+
+    public void clearFreezeArea() {
+        freezeArea = null;
+    }
+
     public void useSkillB() {
+        int drawX = (int) Math.round(px);
+        int drawY = (int) Math.round(py);
+        int offset = 20;
+        int sx = drawX;
+        int sy = drawY;
+        switch (currentDirection) {
+            case RIGHT: sx = drawX + offset; sy = drawY; break;
+            case LEFT: sx = drawX - offset; sy = drawY; break;
+            case UP: sx = drawX; sy = drawY - offset; break;
+            case DOWN: sx = drawX; sy = drawY + offset; break;
+            case UP_LEFT: sx = drawX - offset; sy = drawY - offset; break;
+            case UP_RIGHT: sx = drawX + offset; sy = drawY - offset; break;
+            case DOWN_LEFT: sx = drawX - offset; sy = drawY + offset; break;
+            case DOWN_RIGHT: sx = drawX + offset; sy = drawY + offset; break;
+        }
+        skillWAttacks.add(new SkillWAttack(sx, sy, currentDirection, getTotalAttack()));
         state = FIRESPLASH;
         frameIndex = 0;
         accumulatedAnimationTime = 0f;
     }
-    public void useSkillN() { 
+    public void useSkillN() {
         state = ICEPIERCER;
         frameIndex = 0;
         accumulatedAnimationTime = 0f;
+        // Set freeze area around player
+        int freezeRadius = 100; // pixels
+        int centerX = (int) Math.round(px);
+        int centerY = (int) Math.round(py);
+        freezeArea = new Rectangle(centerX - freezeRadius, centerY - freezeRadius, freezeRadius * 2, freezeRadius * 2);
     }
     public void useSkillM() { System.out.println("Skill M used"); }
+
+    // Method to set TileManager reference for collision detection
+    public void setTileManager(Object tileManager) {
+        this.tileManager = tileManager;
+    }
 }

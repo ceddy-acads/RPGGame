@@ -5,7 +5,7 @@ import java.awt.image.BufferedImage;
 import java.util.Random;
 import javax.imageio.ImageIO;
 import java.io.IOException;
-import maps.Map; // Import the Map class
+
 
 public class Enemy {
     
@@ -34,8 +34,7 @@ public class Enemy {
     private final double RETREAT_DISTANCE = 300; // How far enemies will try to spread
     private final double RETREAT_SPEED_MULTIPLIER = 0.5; // Retreat slower
     
-    // Map reference for collision detection
-    private Map currentMap;
+
 
     //FOR ATTACKING
     private BufferedImage[] attackFrames;
@@ -47,7 +46,8 @@ public class Enemy {
     private int attackFrameDelay = 4; // lower = faster attack animation
     private int attackFrameTimer = 0;
 
-
+    // Freeze effect
+    private int freezeTimer = 0; // in frames, 0 = not frozen
 
     private void loadSprites() {
         try {
@@ -97,17 +97,16 @@ public class Enemy {
             e.printStackTrace();
         }
     }
-    public Enemy(int x, int y, Map map) {
+    public Enemy(int x, int y) {
         this.x = (double) x;
         this.y = (double) y;
         this.width = 60; // reduced width
         this.height = 60; // reduced height
         this.hp = 400;
         this.speed = 0.8; // Further reduced speed
-        this.currentMap = map; // Store map reference
 
         loadSprites();
-        
+
         // Placeholder red square (replace with image later)
         sprite = null;
     }
@@ -115,6 +114,13 @@ public class Enemy {
 
     public void update(int playerX, int playerY, Player player) {
         if (!alive) return;
+
+        // Handle freeze effect
+        if (freezeTimer > 0) {
+            freezeTimer--;
+            // Skip all movement and attack logic while frozen
+            return;
+        }
 
         if (!player.isAlive()) {
             // Player is dead, retreat by moving away from player's position
@@ -129,21 +135,13 @@ public class Enemy {
                 // Move away from player - normalize and multiply by speed
                 double moveX = (dx / dist) * speed * RETREAT_SPEED_MULTIPLIER;
                 double moveY = (dy / dist) * speed * RETREAT_SPEED_MULTIPLIER;
-                
-                // Check collision before moving horizontally
-                int nextX = (int) (x + moveX);
-                if (currentMap.isWalkable(nextX, (int) y, width, height)) {
-                    x += moveX;
-                }
-                
-                // Check collision before moving vertically
-                int nextY = (int) (y + moveY);
-                if (currentMap.isWalkable((int) x, nextY, width, height)) {
-                    y += moveY;
-                }
-                
+
+                // Move freely (no collision)
+                x += moveX;
+                y += moveY;
+
                 facingLeft = dx < 0; // Face the direction of retreat
-                
+
                 // Animate walking during retreat
                 frameTimer++;
                 if (frameTimer >= frameDelay) {
@@ -157,14 +155,10 @@ public class Enemy {
                 double angle = rand.nextDouble() * 2 * Math.PI;
                 double moveX = speed * RETREAT_SPEED_MULTIPLIER * Math.cos(angle);
                 double moveY = speed * RETREAT_SPEED_MULTIPLIER * Math.sin(angle);
-                
-                // Check collision before moving
-                int nextX = (int) (x + moveX);
-                int nextY = (int) (y + moveY);
-                if (currentMap.isWalkable(nextX, nextY, width, height)) {
-                    x += moveX;
-                    y += moveY;
-                }
+
+                // Move freely (no collision)
+                x += moveX;
+                y += moveY;
             }
             return; // Stop further updates if retreating
         } else {
@@ -181,18 +175,10 @@ public class Enemy {
         if (dist > 10 && !attacking) { // Move toward player only if not in the middle of an attack
             double moveX = (dx / dist) * speed;
             double moveY = (dy / dist) * speed;
-            
-            // Check collision before moving horizontally
-            int nextX = (int) (x + moveX);
-            if (currentMap.isWalkable(nextX, (int) y, width, height)) {
-                x += moveX;
-            }
-            
-            // Check collision before moving vertically
-            int nextY = (int) (y + moveY);
-            if (currentMap.isWalkable((int) x, nextY, width, height)) {
-                y += moveY;
-            }
+
+            // Move freely (no collision)
+            x += moveX;
+            y += moveY;
 
             // Animate walking
             frameTimer++;
@@ -273,6 +259,10 @@ public class Enemy {
         }
         System.out.println("Enemy HP: " + hp);
 
+    }
+
+    public void freeze(int frames) {
+        freezeTimer = frames;
     }
 
     public boolean isAlive() {

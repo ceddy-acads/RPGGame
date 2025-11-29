@@ -43,10 +43,10 @@ public class SkillWAttack {
         this.x = x;
         this.y = y;
         this.direction = direction;
-        // Randomize damage: between 5 and playerAttack + 20%
-        // Ensure minimum damage is 5
-        int minDamage = 5;
-        int maxDamage = (int)(playerAttack * 1.2); // PlayerAttack + 20%
+        // Randomize damage: between 10 and playerAttack * 1.5 + 20%
+        // Ensure minimum damage is 10
+        int minDamage = 10;
+        int maxDamage = (int)(playerAttack * 1.5 * 1.2); // 1.5 times playerAttack + 20%
         this.damage = minDamage + (int)(Math.random() * (maxDamage - minDamage + 1));
 
         this.secondsPerFrame = (float) frameDelay / 60.0f;

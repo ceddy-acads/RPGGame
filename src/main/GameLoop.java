@@ -12,8 +12,7 @@ import entities.SlashAttack;
 import entities.SkillWAttack;
 import entities.InventoryUI;
 import entities.Hotbar;
-import maps.Map;
-import maps.MapLoader;
+import tile.TileManager;
 
 public class GameLoop extends JLayeredPane implements Runnable { 
 	
@@ -28,7 +27,7 @@ public class GameLoop extends JLayeredPane implements Runnable {
     private KeyHandler keyH;
     private Player player;
     private ArrayList<Enemy> enemies;  // ✅ Enemy list
-    private Map map; // Use the updated Map object
+    private TileManager tileM; // Tile manager for rendering tiles
     private Hotbar hotbar;
     private GameOverCallback gameOverCallback; // Callback for game over
 
@@ -36,6 +35,7 @@ public class GameLoop extends JLayeredPane implements Runnable {
         this.gameOverCallback = gameOverCallback;
 
         this.setPreferredSize(new Dimension(WIDTH, HEIGHT));
+        this.setBackground(Color.BLACK); // Set background to black to remove white
         this.setDoubleBuffered(true);
 
         keyH = new KeyHandler();
@@ -45,13 +45,12 @@ public class GameLoop extends JLayeredPane implements Runnable {
 
         setupKeyBindings();
 
-        // Load map images and create Map object
-        BufferedImage mapImage = MapLoader.loadMapImage("forest"); 
-        BufferedImage collisionMask = MapLoader.loadCollisionMask("forest");
-        map = new Map(mapImage, collisionMask, TILE_SIZE);
+        // Initialize TileManager first
+        tileM = new TileManager(this);
 
-        // Initialize player with KeyHandler and Map
-        player = new Player(100, 100, keyH, map); 
+        // Initialize player with KeyHandler (start in walkable grass area)
+        player = new Player(144, 80, keyH); // Position (144,80) = center of tile (3,1) area with all grass tiles
+        player.setTileManager(tileM); // Pass TileManager reference for collision
 
         // ✅ Initialize enemies
         enemies = new ArrayList<>();
@@ -73,8 +72,9 @@ public class GameLoop extends JLayeredPane implements Runnable {
 
     public void reset() {
         // Reset player state
-        player = new Player(100, 100, keyH, map); // Re-initialize player at start position, full HP
-        
+        player = new Player(144, 80, keyH); // Re-initialize player at start position in grass, full HP
+        player.setTileManager(tileM); // Re-set TileManager reference
+
         // Clear and re-spawn enemies
         enemies.clear();
         spawnEnemies();
@@ -117,9 +117,9 @@ public class GameLoop extends JLayeredPane implements Runnable {
 
     // ✅ Create test enemies
     private void spawnEnemies() {
-        enemies.add(new Enemy(400, 300, map)); // Pass map reference
-        enemies.add(new Enemy(600, 200, map)); // Pass map reference
-        enemies.add(new Enemy(200, 400, map)); // Pass map reference
+        enemies.add(new Enemy(400, 300)); // No map reference
+        enemies.add(new Enemy(600, 200)); // No map reference
+        enemies.add(new Enemy(200, 400)); // No map reference
     }
 
     @Override
@@ -189,7 +189,18 @@ public class GameLoop extends JLayeredPane implements Runnable {
     	}
 
         // Update player
-        player.update(deltaTime); 
+        player.update(deltaTime);
+
+        // Handle freeze skill
+        Rectangle freezeArea = player.getFreezeArea();
+        if (freezeArea != null) {
+            for (Enemy enemy : enemies) {
+                if (enemy.isAlive() && freezeArea.intersects(enemy.getBounds())) {
+                    enemy.freeze(180); // Freeze for 180 frames (3 seconds at 60fps)
+                }
+            }
+            player.clearFreezeArea();
+        }
 
         // Check if player is dead
         if (!player.isAlive() && player.isDeathAnimationFinished()) {
@@ -223,12 +234,14 @@ public class GameLoop extends JLayeredPane implements Runnable {
         int cameraX = (int) player.px - WIDTH / 2; // Use player.px
         int cameraY = (int) player.py - HEIGHT / 2; // Use player.py
 
-        // Clamp camera to map boundaries
-        cameraX = Math.max(0, Math.min(cameraX, map.getMapWidth() - WIDTH));
-        cameraY = Math.max(0, Math.min(cameraY, map.getMapHeight() - HEIGHT));
+        // Clamp camera to map bounds to prevent white background
+        int mapPixelWidth = tileM.getMapWidth() * TILE_SIZE;
+        int mapPixelHeight = tileM.getMapHeight() * TILE_SIZE;
+        cameraX = Math.max(0, Math.min(cameraX, mapPixelWidth - WIDTH));
+        cameraY = Math.max(0, Math.min(cameraY, mapPixelHeight - HEIGHT));
 
-        // Render the map
-        map.render(g2d, cameraX, cameraY, WIDTH, HEIGHT);
+        // Draw tiles using TileManager with camera offset
+        tileM.draw(g2d, cameraX, cameraY, WIDTH, HEIGHT);
 
         // Adjust player's draw position based on camera
         int playerScreenX = (int) player.px - cameraX; // Use player.px
