@@ -13,11 +13,11 @@ public class SlashAttack {
     private BufferedImage[] frames;
     private int frame = 0;
     private float accumulatedTime = 0f;
-    private final int frameDelay = 4; // Reduced from 8 to 4 for faster animation
+    private final int frameDelay = 4;
     
     private final float secondsPerFrame;
-    private int width = 50;  // Match character size
-    private int height = 50; // Match character size
+    private int width = 50;
+    private int height = 50;
 
     private List<Enemy> hitEnemies = new ArrayList<>();
     
@@ -51,10 +51,8 @@ public class SlashAttack {
         this.x = x;
         this.y = y;
         this.direction = direction;
-        // Randomize damage: between 5 and playerAttack + 20%
-        // Ensure minimum damage is 5
         int minDamage = 5;
-        int maxDamage = (int)(playerAttack * 1.2); // PlayerAttack + 20%
+        int maxDamage = (int)(playerAttack * 1.2);
         this.damage = minDamage + (int)(Math.random() * (maxDamage - minDamage + 1));
 
         this.secondsPerFrame = (float) frameDelay / 60.0f;

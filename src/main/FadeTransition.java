@@ -32,7 +32,7 @@ public class FadeTransition {
 
         if (type == FadeType.FADE_OUT) {
             alpha = 0.0f;
-        } else { // FADE_IN
+        } else {
             alpha = 1.0f;
         }
 
@@ -54,7 +54,7 @@ public class FadeTransition {
                             callback.run();
                         }
                     }
-                } else { // FADE_IN
+                } else {
                     alpha -= 0.05f;
                     if (alpha <= 0.0f) {
                         alpha = 0.0f;

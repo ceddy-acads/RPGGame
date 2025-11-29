@@ -25,17 +25,14 @@ public class Hotbar {
     }
 
     public void draw(Graphics2D g2d) {
-        // Draw hotbar background
         g2d.setColor(new Color(0, 0, 0, 150));
         g2d.fillRect(hotbarX, hotbarY, hotbarWidth, hotbarHeight);
 
-        // Draw hotbar slots
         g2d.setColor(Color.GRAY);
         for (int i = 0; i < numSlots; i++) {
             g2d.drawRect(hotbarX + i * slotSize, hotbarY, slotSize, slotSize);
         }
 
-        // Draw items in hotbar
         List<InventoryUI.Slot> slots = inventory.getInventorySlots();
         for (int i = 0; i < numSlots && i < slots.size(); i++) {
             InventoryUI.Slot slot = slots.get(i);

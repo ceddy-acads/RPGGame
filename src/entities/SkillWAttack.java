@@ -19,8 +19,8 @@ public class SkillWAttack {
     private final int frameDelay = 6;
     
     private final float secondsPerFrame;
-    private int width = 50;  // Match character size
-    private int height = 50; // Match character size
+    private int width = 50;
+    private int height = 50;
 
     private List<Enemy> hitEnemies = new ArrayList<>();
 
@@ -43,10 +43,8 @@ public class SkillWAttack {
         this.x = x;
         this.y = y;
         this.direction = direction;
-        // Randomize damage: between 5 and playerAttack + 20%
-        // Ensure minimum damage is 5
         int minDamage = 5;
-        int maxDamage = (int)(playerAttack * 1.2); // PlayerAttack + 20%
+        int maxDamage = (int)(playerAttack * 1.2);
         this.damage = minDamage + (int)(Math.random() * (maxDamage - minDamage + 1));
 
         this.secondsPerFrame = (float) frameDelay / 60.0f;

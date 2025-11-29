@@ -4,7 +4,7 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import javax.swing.ImageIcon;
 import input.KeyHandler;
-import maps.Map; 
+import maps.Map;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.awt.image.BufferedImage;
@@ -13,60 +13,53 @@ import java.io.IOException;
 
 public class Player {
     private int qCooldown = 0;
-    private final int Q_COOLDOWN_MAX = 30; // 30 frames = 0.5 sec at 60FPS
+    private final int Q_COOLDOWN_MAX = 30;
     private int wCooldown = 0;
-    private final int W_COOLDOWN_MAX = 60; // 1 sec
+    private final int W_COOLDOWN_MAX = 60;
 
-    //HP of the character
     private int maxHp = 100;
     private int hp = 100;
     private boolean alive = true;
     private boolean takingDamage = false;
     private int flashTimer = 0;
 
-    // Player stats
     private int baseAttack = 100;
 
-    // Initial position for respawn
     private final int initialX;
     private final int initialY;
     private int baseDefense = 5;
     private int equippedAttack = 0;
     private int equippedDefense = 0;
 
-    // Position stored as doubles to support diagonal normalization cleanly
-    public double px, py; // Made public for direct access in GameLoop for camera
+    public double px, py;
     private double speed;
     private KeyHandler keyH;
-    private Map currentMap; // Reference to the current map for collision
+    private Map currentMap;
 
-    // State constants
     private static final int IDLE = 0;
     private static final int WALKING = 1;
     private static final int ATTACKING = 2;
     private static final int DYING = 3;
-    private static final int HURT = 4; // New state for taking damage
+    private static final int HURT = 4;
     private static final int FIRESPLASH = 5;
-    private static final int ICEPIERCER = 6; // New state for Ice Piercer skill
-    private int state = IDLE;  // Start in idle state
+    private static final int ICEPIERCER = 6;
+    private int state = IDLE;
 
-    // Animation frames [direction][frameIndex]
     private Image[][] frames;
-    private Image[][] dieFrames; // New array for death animation frames
+    private Image[][] dieFrames;
     private Image[][] attackFrames;
     private Image[][] idleFrames;
     private Image[][] hurtFrames;
     private Image[][] firesplashFrames;
-    private Image[][] icepiercerFrames; // New array for Ice Piercer animation frames
-    private Image currentImg;  // General image
+    private Image[][] icepiercerFrames;
+    private Image currentImg;
     private int deathDirection = DOWN;
-    private int frameIndex = 0;        // Default for walking
-    private float accumulatedAnimationTime = 0f;  // For time-based animation
-    private final float playerFrameDuration = 0.1f;  // Time per frame
-    private boolean deathAnimationFinished = false; // Flag to indicate if death animation is done
+    private int frameIndex = 0;
+    private float accumulatedAnimationTime = 0f;
+    private final float playerFrameDuration = 0.1f;
+    private boolean deathAnimationFinished = false;
     private static final int HURT_FRAMES = 5;
 
-    // Direction constants
     private static final int DOWN = 0;
     private static final int LEFT = 1;
     private static final int RIGHT = 2;
@@ -77,13 +70,10 @@ public class Player {
     private static final int DOWN_RIGHT = 7;
     private int currentDirection = DOWN;
     
-    // Player dimensions for collision
-    public final int playerWidth = 64; // Reverted width to 64
-    public final int playerHeight = 64; // Rtverteed height to64
+    public final int playerWidth = 100;
+    public final int playerHeight = 100;
 
-    // Slash attacks for SkillQ
     private final ArrayList<SlashAttack> slashes = new ArrayList<>();
-    // SkillW attacks
     private final ArrayList<SkillWAttack> skillWAttacks = new ArrayList<>();
 
     public ArrayList<SlashAttack> getSlashes() {
@@ -119,30 +109,30 @@ public class Player {
         if (hp <= 0) {
             hp = 0;
             alive = false;
-            this.deathDirection = this.currentDirection; // Store direction at time of death
-            state = DYING; // Set state to DYING
-            frameIndex = 0; // Start death animation from first frame
-            accumulatedAnimationTime = 0f; // Reset animation timer
+            this.deathDirection = this.currentDirection;
+            state = DYING;
+            frameIndex = 0;
+            accumulatedAnimationTime = 0f;
             System.out.println("Player defeated!");
         } else {
             System.out.println("Player HP: " + hp);
         }
     }
 
-    public Player(int startX, int startY, KeyHandler keyH, Map map) { 
-        this.initialX = startX; // Store initial X
-        this.initialY = startY; // Store initial Y
+    public Player(int startX, int startY, KeyHandler keyH, Map map) {
+        this.initialX = startX;
+        this.initialY = startY;
         this.keyH = keyH;
-        this.currentMap = map; 
+        this.currentMap = map;
         this.px = startX;
         this.py = startY;
         this.speed = 4.0;
-        this.hp = maxHp; // Start with full HP
+        this.hp = maxHp;
         this.alive = true;
         this.state = IDLE;
         this.deathAnimationFinished = false;
-        loadFrames();  
-        currentImg = idleFrames[DOWN][0];  
+        loadFrames();
+        currentImg = idleFrames[DOWN][0];
     }
 
     public void resetPlayerState() {
@@ -158,44 +148,36 @@ public class Player {
         this.skillWAttacks.clear();
     }
 
-    // Load frames for 4 directions and reuse for diagonals if needed
     private void loadFrames() {
-        frames = new Image[8][6]; // 8 directions, 6 frames each
+        frames = new Image[8][6];
         attackFrames = new Image[8][6];
         idleFrames = new Image[8][6];
         BufferedImage spriteSheet = loadSpriteSheet("/assets/characters/player_walk.png");
 
         if (spriteSheet != null) {
             
-            for (int i = 0; i < 6; i++) { 
+            for (int i = 0; i < 6; i++) {
                 frames[DOWN][i] = getSubImage(spriteSheet, i, 0);
-                frames[LEFT][i] = getSubImage(spriteSheet, i, 1); 
+                frames[LEFT][i] = getSubImage(spriteSheet, i, 1);
                 frames[RIGHT][i] = getSubImage(spriteSheet, i, 2);
                 frames[UP][i] = getSubImage(spriteSheet, i, 3);
             }
         }
 
-        // Diagonals reuse vertical/horizontal frames
         frames[UP_LEFT] = frames[UP];
         frames[UP_RIGHT] = frames[UP];
         frames[DOWN_LEFT] = frames[DOWN];
         frames[DOWN_RIGHT] = frames[DOWN];
 
-        // Load death animation frames from sprite sheet
-        dieFrames = new Image[8][6]; // Match frames structure
+        dieFrames = new Image[8][6];
         BufferedImage dieSpriteSheet = loadSpriteSheet("/assets/characters/player_death.png");
         if (dieSpriteSheet != null) {
-            // Row 0: Die Down
-            // Row 1: Die Left
-            // Row 2: Die Right
-            // Row 3: Die Up (Assuming typo from Row 4)
-            for (int i = 0; i < 6; i++) { // 6 frames per direction
+            for (int i = 0; i < 6; i++) {
                 dieFrames[DOWN][i] = getSubImage(dieSpriteSheet, i, 0);
                 dieFrames[LEFT][i] = getSubImage(dieSpriteSheet, i, 1);
                 dieFrames[RIGHT][i] = getSubImage(dieSpriteSheet, i, 2);
                 dieFrames[UP][i] = getSubImage(dieSpriteSheet, i, 3);
             }
-             // Map diagonals
             dieFrames[UP_LEFT] = dieFrames[LEFT];
             dieFrames[UP_RIGHT] = dieFrames[RIGHT];
             dieFrames[DOWN_LEFT] = dieFrames[LEFT];
@@ -206,9 +188,9 @@ public class Player {
         
         BufferedImage attackSpriteSheet = loadSpriteSheet("/assets/characters/playerwalk_attack.png");
         if(attackSpriteSheet != null){
-            for (int i = 0; i < 6; i++) { 
+            for (int i = 0; i < 6; i++) {
                 attackFrames[DOWN][i] = getSubImage(attackSpriteSheet, i, 0);
-                attackFrames[LEFT][i] = getSubImage(attackSpriteSheet, i, 1); 
+                attackFrames[LEFT][i] = getSubImage(attackSpriteSheet, i, 1);
                 attackFrames[RIGHT][i] = getSubImage(attackSpriteSheet, i, 2);
                 attackFrames[UP][i] = getSubImage(attackSpriteSheet, i, 3);
             }
@@ -219,8 +201,7 @@ public class Player {
         attackFrames[DOWN_LEFT] = attackFrames[DOWN];
         attackFrames[DOWN_RIGHT] = attackFrames[DOWN];
 
-        // Use the first frame of walking animation as the idle frame
-        for (int i = 0; i < 6; i++) { // Assign the first frame to all idle frames to stop animation
+        for (int i = 0; i < 6; i++) {
             idleFrames[DOWN][i] = frames[DOWN][0];
             idleFrames[LEFT][i] = frames[LEFT][0];
             idleFrames[RIGHT][i] = frames[RIGHT][0];
@@ -232,7 +213,6 @@ public class Player {
         idleFrames[DOWN_LEFT] = idleFrames[DOWN];
         idleFrames[DOWN_RIGHT] = idleFrames[DOWN];
 
-        // Load hurt animation frames
         hurtFrames = new Image[8][HURT_FRAMES];
         BufferedImage hurtSpriteSheet = loadSpriteSheet("/assets/characters/player_hurt.png");
         if (hurtSpriteSheet != null) {
@@ -248,10 +228,10 @@ public class Player {
         hurtFrames[DOWN_LEFT] = hurtFrames[DOWN];
         hurtFrames[DOWN_RIGHT] = hurtFrames[DOWN];
 
-        firesplashFrames = new Image[8][6]; // Corrected to 6 frames per direction
+        firesplashFrames = new Image[8][6];
         BufferedImage firesplashSpriteSheet = loadSpriteSheet("/assets/characters/player_firesplash.png");
         if (firesplashSpriteSheet != null) {
-            for (int i = 0; i < 6; i++) { // Corrected loop to 6 frames
+            for (int i = 0; i < 6; i++) {
                 firesplashFrames[DOWN][i] = getSubImage(firesplashSpriteSheet, i, 0);
                 firesplashFrames[LEFT][i] = getSubImage(firesplashSpriteSheet, i, 1);
                 firesplashFrames[RIGHT][i] = getSubImage(firesplashSpriteSheet, i, 2);
@@ -306,16 +286,15 @@ public class Player {
                     return new ImageIcon(res).getImage();
                 }
             } catch (Exception e) {
-                // Ignore and try next
                 System.err.println("Could not load image: " + p);
             }
         }
-        return null;  // Return null if not found
+        return null;
     }
 
-    public void update(float deltaTime) { // Removed map parameter, now uses stored map
+    public void update(float deltaTime) {
         if (!alive && deathAnimationFinished) {
-            return; // Stop updating if dead and animation finished
+            return;
         }
 
         if (state == DYING) {
@@ -323,12 +302,11 @@ public class Player {
             if (accumulatedAnimationTime >= playerFrameDuration) {
                 frameIndex++;
                 accumulatedAnimationTime -= playerFrameDuration;
-                if (frameIndex >= dieFrames[0].length) { // Check against number of frames in one sequence
-                    frameIndex = dieFrames[0].length - 1; // Stay on the last frame
+                if (frameIndex >= dieFrames[0].length) {
+                    frameIndex = dieFrames[0].length - 1;
                     deathAnimationFinished = true;
                 }
             }
-            // If dying, skip all movement and attack logic
             return;
         }
 
@@ -339,55 +317,47 @@ public class Player {
                 accumulatedAnimationTime -= playerFrameDuration;
                 if (frameIndex >= HURT_FRAMES) {
                     frameIndex = 0;
-                    state = IDLE; // Return to idle after hurt animation
+                    state = IDLE;
                 }
             }
-            // Skip other logic when hurt
             return;
         }
 
         if (qCooldown > 0) qCooldown--;
         if (wCooldown > 0) wCooldown--;
 
-        // --- Q Attack: cooldown-limited, one press = one attack ---
-        if (keyH.skillSPACE && qCooldown == 0) { // Changed to skillSPACE
+        if (keyH.skillSPACE && qCooldown == 0) {
             useSkillQ();
             qCooldown = Q_COOLDOWN_MAX;
-            keyH.skillSPACE = false; // Reset the skill key after use
+            keyH.skillSPACE = false;
         }
 
-        // --- W Attack: cooldown-limited, one press = one attack ---
         if (keyH.skillW && wCooldown == 0) {
             useSkillW();
             wCooldown = W_COOLDOWN_MAX;
-            keyH.skillW = false; // Reset the skill key after use
+            keyH.skillW = false;
         }
 
-        // Movement input aggregated
         double dx = 0.0, dy = 0.0;
         if (keyH.upPressed) dy -= speed;
         if (keyH.downPressed) dy += speed;
         if (keyH.leftPressed) dx -= speed;
         if (keyH.rightPressed) dx += speed;
 
-        // Normalize diagonal
         if (dx != 0 && dy != 0) {
-            dx *= 0.7071067811865476; // 1/sqrt(2)
+            dx *= 0.7071067811865476;
             dy *= 0.7071067811865476;
         }
 
-        // Apply movement with collision detection
         int nextX = (int) (px + dx);
         int nextY = (int) (py + dy);
 
-        // Check horizontal movement
         if (dx != 0) {
             if (currentMap.isWalkable(nextX, (int) py, playerWidth, playerHeight)) {
                 px += dx;
             }
         }
 
-        // Check vertical movement
         if (dy != 0) {
             if (currentMap.isWalkable((int) px, nextY, playerWidth, playerHeight)) {
                 py += dy;
@@ -395,7 +365,6 @@ public class Player {
         }
         
         boolean isAttacking = !slashes.isEmpty() || !skillWAttacks.isEmpty();
-        // Only update state if not in a non-interruptible state
         if (state != FIRESPLASH && state != HURT && state != DYING && state != ICEPIERCER) {
             boolean isMoving = (dx != 0 || dy != 0);
 
@@ -405,9 +374,9 @@ public class Player {
                 state = WALKING;
             } else {
                 state = IDLE;
+                
             }
         }
-        // Update active attacks
         Iterator<SlashAttack> it = slashes.iterator();
         while (it.hasNext()) {
             SlashAttack s = it.next();
@@ -421,8 +390,7 @@ public class Player {
             if (!s.active) skillWIt.remove();
         }
         
-        // Determine current facing based on last input vector, but only if not attacking
-        if (!isAttacking) { 
+        if (!isAttacking) {
             if (dx > 0 && dy < 0) currentDirection = UP_RIGHT;
             else if (dx > 0 && dy > 0) currentDirection = DOWN_RIGHT;
             else if (dx < 0 && dy < 0) currentDirection = UP_LEFT;
@@ -433,14 +401,13 @@ public class Player {
             else if (dy > 0) currentDirection = DOWN;
         }
 
-        // Animation logic based on state
         switch (state) {
             case ICEPIERCER:
                 accumulatedAnimationTime += deltaTime;
                 if (accumulatedAnimationTime >= playerFrameDuration) {
                     frameIndex++;
                     accumulatedAnimationTime -= playerFrameDuration;
-                    if (frameIndex >= 6) { // Ice Piercer has 6 frames
+                    if (frameIndex >= 6) {
                         frameIndex = 0;
                         state = IDLE;
                     }
@@ -454,18 +421,16 @@ public class Player {
                 if (accumulatedAnimationTime >= playerFrameDuration) {
                     frameIndex++;
                     accumulatedAnimationTime -= playerFrameDuration;
-                    if (frameIndex >= 6) { // Corrected to 6 frames
+                    if (frameIndex >= 6) {
                         frameIndex = 0;
                         state = IDLE;
                     }
                 }
-                // Ensure frameIndex is within bounds before accessing array
-                if (frameIndex < 6) { // Corrected to 6 frames
+                if (frameIndex < 6) {
                     currentImg = firesplashFrames[currentDirection][frameIndex];
                 }
                 break;
             case HURT:
-                // Similar logic as DYING and HURT at the top of update()
                 break;
             case ATTACKING:
                 accumulatedAnimationTime += deltaTime;
@@ -496,25 +461,24 @@ public class Player {
                 break;
         }
 
-        // Skills B/N/M
         if (keyH.skillB) {
             useSkillB();
-            keyH.skillB = false; // Reset to prevent continuous skill use
+            keyH.skillB = false;
         }
         if (keyH.skillN) {
             useSkillN();
-            keyH.skillN = false; // Reset to prevent continuous skill use
+            keyH.skillN = false;
         }
         if (keyH.skillM) {
             state = ATTACKING;
             useSkillM();
-            keyH.skillM = false; // Reset to prevent continuous skill use
+            keyH.skillM = false;
         }
     }
 
     public void draw(Graphics g, int screenX, int screenY) {
         if (!alive && deathAnimationFinished) {
-            return; // Don't draw anything if dead and animation finished
+            return;
         }
 
         Graphics2D g2 = (Graphics2D) g;
@@ -523,16 +487,15 @@ public class Player {
         int width = playerWidth;
         int height = playerHeight;
 
-        // Draw death animation if dying
         if (state == DYING && !deathAnimationFinished) {
             Image currentDieFrame = dieFrames[deathDirection][frameIndex];
             if (currentDieFrame != null) {
                 g2.drawImage(currentDieFrame, drawX, drawY, width, height, null);
             } else {
-                g2.setColor(Color.DARK_GRAY); // Fallback for missing death frame
+                g2.setColor(Color.DARK_GRAY);
                 g2.fillRect(drawX, drawY, width, height);
             }
-            return; // Don't draw anything else if dying
+            return;
         }
 
 
@@ -543,13 +506,10 @@ public class Player {
             g2.fillRect(drawX, drawY, 32, 32);
         }
 
-        // Draw HP bar above player
         g.setColor(Color.GRAY);
         g.fillRect(drawX, drawY - 10, width, 5);
         g.setColor(Color.GREEN);
         g.fillRect(drawX, drawY - 10, (int) (width * ((double) hp / maxHp)), 5);
-
-        // Skill animations are drawn by GameLoop, not Player itself.
     }
 
     public void useSkillQ() {
@@ -592,7 +552,6 @@ public class Player {
         state = ATTACKING;
     }
 
-    // Getters
     public int getX() {
         return (int) Math.round(this.px);
     }
@@ -614,7 +573,7 @@ public class Player {
         frameIndex = 0;
         accumulatedAnimationTime = 0f;
     }
-    public void useSkillN() { 
+    public void useSkillN() {
         state = ICEPIERCER;
         frameIndex = 0;
         accumulatedAnimationTime = 0f;

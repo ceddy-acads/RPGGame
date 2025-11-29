@@ -71,30 +71,21 @@ public class GameLandingPage extends JPanel implements ActionListener, MouseList
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        // move clouds left and right gently
         for (Point p : clouds) {
-            p.x += cloudDirection * 0.5; // move in current direction
+            p.x += cloudDirection * 0.5;
         }
 
-        // reverse direction when reaching sides
         if (!clouds.isEmpty()) {
             Point first = clouds.get(0);
             if (first.x > 40 || first.x < -40) {
-                cloudDirection *= -1; // reverse direction
+                cloudDirection *= -1;
             }
         }
 
         repaint();
 
-
-        // Sword bob animation
-      //  if (swordUp) swordY--;
-      //  else swordY++;
-      //  if (swordY < -8) swordUp = false;
-      //  if (swordY > 8) swordUp = true;
-
        if (flashCooldown > 0) flashCooldown--;
-        else if (!flashing && Math.random() < 0.01) {  // random flash start
+        else if (!flashing && Math.random() < 0.01) {
             flashing = true;
             flashAlpha = 0.0f;
         }

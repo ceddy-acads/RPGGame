@@ -5,16 +5,7 @@ import javax.swing.ImageIcon;
 
 public class MapManager {
     private int[][] mapData = {
-        {0,0,0,1,1,1,0,0,0,0},
-        {0,0,0,1,0,0,0,0,0,0},
-        {0,0,0,1,0,0,0,0,0,0},
-        {0,0,0,1,0,0,0,1,1,0},
-        {0,0,0,0,0,0,0,1,0,0},
-        {0,0,0,0,0,0,0,1,0,0},
-        {0,0,0,0,0,0,0,1,0,0},
-        {0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0}
+       
     };
 
     private Image grass = new ImageIcon("assets/tiles/grass.png").getImage();

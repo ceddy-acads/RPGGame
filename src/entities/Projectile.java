@@ -22,7 +22,7 @@ public class Projectile {
             sprite = ImageIO.read(getClass().getResourceAsStream("/sprites/fireball.png"));
         } catch (IOException e) {
             e.printStackTrace();
-            System.out.println("⚠️ Fireball sprite not found!");
+            System.out.println("Fireball sprite not found!");
         }
     }
 
@@ -30,7 +30,6 @@ public class Projectile {
         x += directionX * speed;
         y += directionY * speed;
 
-        // deactivate if off-screen
         if (x < 0 || x > 800 || y < 0 || y > 600) {
             active = false;
         }

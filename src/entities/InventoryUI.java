@@ -10,7 +10,7 @@ import java.util.*;
 import javax.swing.ImageIcon;
 import java.awt.image.BufferedImage;
 
-public class InventoryUI extends JPanel { // Changed from JFrame
+public class InventoryUI extends JPanel {
 
     enum ItemType { EQUIPMENT, CONSUMABLE, MATERIAL }
 
@@ -62,7 +62,6 @@ public class InventoryUI extends JPanel { // Changed from JFrame
 
     private java.util.List<Item> allItems = new ArrayList<>();
 
-    // --- color palette (medieval parchment)
     private final Color PARCHMENT = new Color(217,195,154);
     private final Color PARCHMENT_DARK = new Color(200,175,130);
     private final Color SLOT_BG = new Color(140,111,69);
@@ -75,14 +74,11 @@ public class InventoryUI extends JPanel { // Changed from JFrame
     private final Color BUTTON_DROP = new Color(168,92,61);
     private final Color SELECT_BORDER = new Color(206,160,98);
 
-    // Modified constructor to match GameLoop's expectation
     public InventoryUI(int screenWidth, int screenHeight) {
-        // Removed JFrame specific calls
-        setPreferredSize(new Dimension(screenWidth, screenHeight)); // Set preferred size
-        setBackground(PARCHMENT); // Set background for the JPanel
-        setLayout(new BorderLayout()); // Use BorderLayout for the main panel
+        setPreferredSize(new Dimension(screenWidth, screenHeight));
+        setBackground(PARCHMENT);
+        setLayout(new BorderLayout());
 
-        // --- UIManager tab colors should be set BEFORE creating JTabbedPane
         UIManager.put("TabbedPane.selected", PARCHMENT);
         UIManager.put("TabbedPane.contentAreaColor", PARCHMENT_DARK);
         UIManager.put("TabbedPane.unselectedBackground", new Color(160,135,100));
@@ -104,17 +100,11 @@ public class InventoryUI extends JPanel { // Changed from JFrame
         addItemToInventory(cloneItem("potion_red"), 3);
         addItemToInventory(cloneItem("ring_green"));
 
-        // JPanel root = new JPanel(new BorderLayout()); // No longer need a root panel, this JPanel is the root
-        // add(root);
-
-        // left column
         JPanel leftCol = new JPanel();
         leftCol.setLayout(new BoxLayout(leftCol, BoxLayout.Y_AXIS));
         leftCol.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         leftCol.setPreferredSize(new Dimension(300, 600));
 
-        // style main panels with parchment colors
-        // root.setBackground(PARCHMENT); // Set background for this JPanel instead
         leftCol.setBackground(PARCHMENT);
         gridPanel.setBackground(PARCHMENT_DARK);
         equipPanel.setBackground(PARCHMENT_DARK);
@@ -133,7 +123,6 @@ public class InventoryUI extends JPanel { // Changed from JFrame
 
         JPanel buttonPanel = new JPanel(new GridLayout(1, 3, 5, 5));
         buttonPanel.setBackground(PARCHMENT);
-        // style buttons
         styleButton(btnEquip, BUTTON_BROWN);
         styleButton(btnUse, new Color(155,134,78));
         styleButton(btnDrop, BUTTON_DROP);
@@ -147,15 +136,14 @@ public class InventoryUI extends JPanel { // Changed from JFrame
         leftCol.add(Box.createVerticalStrut(10));
         leftCol.add(buttonPanel);
 
-        // Create tabs (gridPanel placed inside)
         JTabbedPane tabs = new JTabbedPane();
         tabs.setBackground(PARCHMENT);
         tabs.addTab("Equipment", new JScrollPane(gridPanel));
         tabs.addTab("Consumables", new JScrollPane(gridPanel));
         tabs.addTab("Materials", new JScrollPane(gridPanel));
 
-        add(leftCol, BorderLayout.WEST); // Add to this JPanel
-        add(tabs, BorderLayout.CENTER);   // Add to this JPanel
+        add(leftCol, BorderLayout.WEST);
+        add(tabs, BorderLayout.CENTER);
 
         refreshGrid();
 
@@ -198,7 +186,7 @@ public class InventoryUI extends JPanel { // Changed from JFrame
             row.addMouseListener(new MouseAdapter() {
                 public void mouseClicked(MouseEvent e) {
                     selectedSlot = slot;
-                    refreshGrid(); // to repaint selection on grid slots (and equipment visual if you wanted)
+                    refreshGrid();
                     updateDetail();
                 }
                 public void mouseEntered(MouseEvent e) {
@@ -220,7 +208,6 @@ public class InventoryUI extends JPanel { // Changed from JFrame
         panel.setBackground(SLOT_BG);
         panel.setPreferredSize(new Dimension(80, 80));
 
-        // border: show selected border if this is selectedSlot
         if (slot == selectedSlot) {
             panel.setBorder(new LineBorder(SELECT_BORDER, 4));
         } else {
@@ -249,7 +236,7 @@ public class InventoryUI extends JPanel { // Changed from JFrame
             public void mouseClicked(MouseEvent e) {
                 selectedSlot = slot;
                 updateDetail();
-                refreshGrid(); // redraw borders to show selection
+                refreshGrid();
                 refreshEquipmentPanel();
             }
 
@@ -262,9 +249,6 @@ public class InventoryUI extends JPanel { // Changed from JFrame
             }
         });
 
-        // The TransferHandler and DropTarget setup needs to be compatible with how items are dragged and dropped.
-        // This might need further adjustments depending on the game's drag-and-drop implementation.
-        // For now, I'll keep them as they are from the original inventory.java.
         panel.setTransferHandler(new TransferHandler("item") {
             @Override
             public int getSourceActions(JComponent c) {
@@ -325,14 +309,10 @@ public class InventoryUI extends JPanel { // Changed from JFrame
     }
 
     public void reset() {
-        // This method was added in the previous fix and needs to be implemented.
-        // For this new inventory UI, we can reset selected slot and refresh panels.
         selectedSlot = null;
-        updateDetail(); // Clear details
+        updateDetail();
         refreshGrid();
         refreshEquipmentPanel();
-        // You might also want to clear inventory/equipment contents here if 'reset' means starting fresh.
-        // For now, assume it just resets the UI state.
     }
 
     private void updateDetail() {
@@ -363,13 +343,9 @@ public class InventoryUI extends JPanel { // Changed from JFrame
         if (selectedSlot == null || selectedSlot.item == null) return;
         Item it = selectedSlot.item;
 
-        String target = "Weapon"; // Default target
+        String target = "Weapon";
         if (it.name.toLowerCase().contains("ring")) target = "Ring";
         else if (it.type == ItemType.EQUIPMENT) {
-            // Need a more robust way to determine head/chest slots
-            // For now, just allow "Weapon" and "Ring" from example
-            // If it's a generic equipment and not a ring/weapon, where should it go?
-            // This logic needs to be expanded based on actual item types and equipment slots.
             System.out.println("Cannot equip item of type " + it.name + " to a specific slot yet.");
             return;
         } else {
@@ -456,7 +432,6 @@ public class InventoryUI extends JPanel { // Changed from JFrame
             }
     }
 
-    // Public getter for inventorySlots, required by Hotbar
     public java.util.List<Slot> getInventorySlots() {
         return inventorySlots;
     }

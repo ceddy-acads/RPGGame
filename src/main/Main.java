@@ -3,17 +3,17 @@ package main;
 import javax.swing.*;
 import java.awt.*;
 import entities.GameLandingPage;
-import entities.StoryScreen; 
+import entities.StoryScreen;
 import entities.GameOverScreen;
-import java.awt.image.BufferedImage; // Import for BufferedImage
+import java.awt.image.BufferedImage;
 
 public class Main {
     private static JFrame window;
     private static CardLayout cardLayout;
     private static JPanel mainPanel;
     private static GameLoop gameLoop;
-    private static GameLandingPage landingPage; 
-    private static StoryScreen storyScreen; 
+    private static GameLandingPage landingPage;
+    private static StoryScreen storyScreen;
     private static GameOverScreen gameOverScreen;
 
     public static void main(String[] args) {
@@ -22,9 +22,9 @@ public class Main {
         mainPanel = new JPanel(cardLayout);
 
         landingPage = new GameLandingPage(Main::showStoryScreen);
-        storyScreen = new StoryScreen(Main::startGame); // Use the refactored StoryScreen
-        gameLoop = new GameLoop(Main::showGameOverScreenWithScreenshot); // Pass a callback for game over with screenshot
-        gameOverScreen = new GameOverScreen(Main::resetGame); // Pass a callback for continue
+        storyScreen = new StoryScreen(Main::startGame);
+        gameLoop = new GameLoop(Main::showGameOverScreenWithScreenshot);
+        gameOverScreen = new GameOverScreen(Main::resetGame);
 
         mainPanel.add(landingPage, "LANDING");
         mainPanel.add(storyScreen, "STORY");
@@ -58,9 +58,8 @@ public class Main {
         });
     }
 
-    // Modified callback to accept screenshot
     public static void showGameOverScreenWithScreenshot(BufferedImage screenshot) {
-        gameOverScreen.setBackgroundImage(screenshot); // Set the screenshot as background
+        gameOverScreen.setBackgroundImage(screenshot);
         new FadeTransition(window, FadeTransition.FadeType.FADE_OUT, () -> {
             cardLayout.show(mainPanel, "GAME_OVER");
             gameOverScreen.requestFocusInWindow();
@@ -70,10 +69,10 @@ public class Main {
 
     public static void resetGame() {
         new FadeTransition(window, FadeTransition.FadeType.FADE_OUT, () -> {
-            gameLoop.reset(); // Reset game state
+            gameLoop.reset();
             cardLayout.show(mainPanel, "GAME");
             gameLoop.requestFocusInWindow();
-            gameLoop.start(); // Restart the game loop if needed, or ensure it continues
+            gameLoop.start();
             new FadeTransition(window, FadeTransition.FadeType.FADE_IN, null);
         });
     }

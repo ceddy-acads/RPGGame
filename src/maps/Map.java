@@ -20,24 +20,21 @@ public class Map {
             this.mapHeight = mapImage.getHeight();
         } else {
             System.err.println("Map image is null, creating fallback map dimensions.");
-            this.mapWidth = 20 * tileSize; // Default width
-            this.mapHeight = 15 * tileSize; // Default height
+            this.mapWidth = 20 * tileSize;
+            this.mapHeight = 15 * tileSize;
         }
     }
 
     public void render(Graphics2D g2d, int cameraX, int cameraY, int screenWidth, int screenHeight) {
         if (mapImage != null) {
-            // Ensure camera doesn't go outside map bounds
             cameraX = Math.max(0, Math.min(cameraX, mapWidth - screenWidth));
             cameraY = Math.max(0, Math.min(cameraY, mapHeight - screenHeight));
 
-            // Draw the visible portion of the map
             g2d.drawImage(mapImage,
                          0, 0, screenWidth, screenHeight,
                          cameraX, cameraY, cameraX + screenWidth, cameraY + screenHeight,
                          null);
         } else {
-            // Fallback: draw a solid color if no image is loaded
             g2d.setColor(new Color(34, 139, 34));
             g2d.fillRect(0, 0, screenWidth, screenHeight);
         }
@@ -47,7 +44,7 @@ public class Map {
         if (collision != null) {
             return !collision.isBlocked(x, y, width, height);
         }
-        return true; // If no collision mask, everything is walkable
+        return true;
     }
 
     public int getTileSize() {

@@ -51,7 +51,7 @@ public class StoryScreen extends JPanel {
                     nextSlide();
                 }
                 if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                    onStoryEnd.run(); // skip to game
+                    onStoryEnd.run();
                 }
             }
         });
@@ -161,27 +161,25 @@ public class StoryScreen extends JPanel {
                 g2d.setFont(new Font("Georgia", Font.ITALIC, 20));
                 FontMetrics fm = g2d.getFontMetrics();
 
-                int maxWidth = getWidth() - 100; // 50px margin on each side
+                int maxWidth = getWidth() - 100;
                 java.util.List<String> lines = getWrappedLines(text, fm, maxWidth);
                 int lineHeight = fm.getHeight();
                 int textBlockHeight = lineHeight * lines.size();
 
-                // Calculate vertical center with responsive offset
                 int verticalCenter = getHeight() / 2;
-                int maxVisibleHeight = getHeight() - 200; // Reserve space for hints
+                int maxVisibleHeight = getHeight() - 200;
                 int textOffset = Math.max(50, (maxVisibleHeight - textBlockHeight) / 2);
 
                 int y = verticalCenter - (textBlockHeight / 2) + textOffset;
 
-                // Ensure text stays within visible bounds
-                if (y < 80) y = 80; // Minimum top margin
+                if (y < 80) y = 80;
                 if (y + textBlockHeight > getHeight() - 60) {
-                    y = getHeight() - 60 - textBlockHeight; // Adjust if too low
+                    y = getHeight() - 60 - textBlockHeight;
                 }
 
                 for (String line : lines) {
                     if (line.trim().isEmpty()) {
-                        y += lineHeight; // Handle blank lines
+                        y += lineHeight;
                         continue;
                     }
 
@@ -189,11 +187,9 @@ public class StoryScreen extends JPanel {
 
                     g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, textAlpha));
 
-                    // Shadow text
                     g2d.setColor(new Color(0, 0, 0, 180));
                     g2d.drawString(line, x + 2, y + 2);
 
-                    // Main text
                     g2d.setColor(new Color(255, 255, 255, 230));
                     g2d.drawString(line, x, y);
 

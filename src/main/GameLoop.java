@@ -2,7 +2,7 @@ package main;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*; // Import AWT event classes for KeyAdapter and KeyEvent
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import input.KeyHandler;
@@ -19,20 +19,20 @@ public class GameLoop extends JLayeredPane implements Runnable {
 	
     final int WIDTH = 800;
     final int HEIGHT = 600;
-    final int TILE_SIZE = 48; // Consistent tile size
+    final int TILE_SIZE = 48;
 
-    private boolean inventoryOpen = false; // To track inventory state
-    private InventoryUI gameInventory; // The inventory panel
+    private boolean inventoryOpen = false;
+    private InventoryUI gameInventory;
 
     private Thread gameThread;
     private KeyHandler keyH;
     private Player player;
-    private ArrayList<Enemy> enemies;  // ✅ Enemy list
-    private Map map; // Use the updated Map object
+    private ArrayList<Enemy> enemies;
+    private Map map;
     private Hotbar hotbar;
-    private GameOverCallback gameOverCallback; // Callback for game over
+    private GameOverCallback gameOverCallback;
 
-    public GameLoop(GameOverCallback gameOverCallback) { // Modified constructor
+    public GameLoop(GameOverCallback gameOverCallback) {
         this.gameOverCallback = gameOverCallback;
 
         this.setPreferredSize(new Dimension(WIDTH, HEIGHT));
@@ -45,26 +45,21 @@ public class GameLoop extends JLayeredPane implements Runnable {
 
         setupKeyBindings();
 
-        // Load map images and create Map object
-        BufferedImage mapImage = MapLoader.loadMapImage("forest"); 
+        BufferedImage mapImage = MapLoader.loadMapImage("forest");
         BufferedImage collisionMask = MapLoader.loadCollisionMask("forest");
         map = new Map(mapImage, collisionMask, TILE_SIZE);
 
-        // Initialize player with KeyHandler and Map
-        player = new Player(100, 100, keyH, map); 
+        player = new Player(100, 100, keyH, map);
 
-        // ✅ Initialize enemies
         enemies = new ArrayList<>();
         spawnEnemies();
 
-        // Initialize inventory
         gameInventory = new InventoryUI(WIDTH, HEIGHT);
 
-        // Initialize hotbar
         hotbar = new Hotbar(WIDTH, HEIGHT, gameInventory);
-        gameInventory.setBounds(0, 0, WIDTH, HEIGHT); 
-        gameInventory.setVisible(false); 
-        this.add(gameInventory, JLayeredPane.PALETTE_LAYER); 
+        gameInventory.setBounds(0, 0, WIDTH, HEIGHT);
+        gameInventory.setVisible(false);
+        this.add(gameInventory, JLayeredPane.PALETTE_LAYER);
     }
 
     public void start() {
@@ -72,23 +67,18 @@ public class GameLoop extends JLayeredPane implements Runnable {
     }
 
     public void reset() {
-        // Reset player state
-        player = new Player(100, 100, keyH, map); // Re-initialize player at start position, full HP
+        player = new Player(100, 100, keyH, map);
         
-        // Clear and re-spawn enemies
         enemies.clear();
         spawnEnemies();
 
-        // Reset inventory (if necessary, clear items or reset state)
         gameInventory.reset();
 
-        // Reset any other game state variables
         inventoryOpen = false;
         gameInventory.setVisible(false);
 
-        // Ensure gameThread is stopped before restarting, or handle appropriately
         if (gameThread != null) {
-            gameThread = null; // Signal thread to stop
+            gameThread = null;
         }
     }
 
@@ -109,23 +99,21 @@ public class GameLoop extends JLayeredPane implements Runnable {
         inventoryOpen = !inventoryOpen;
         gameInventory.setVisible(inventoryOpen);
         if (inventoryOpen) {
-            gameInventory.requestFocusInWindow(); // Give focus to inventory for hotbar input
+            gameInventory.requestFocusInWindow();
         } else {
-            this.requestFocusInWindow(); // Return focus to game loop
+            this.requestFocusInWindow();
         }
     }
 
-    // ✅ Create test enemies
     private void spawnEnemies() {
-        enemies.add(new Enemy(400, 300, map)); // Pass map reference
-        enemies.add(new Enemy(600, 200, map)); // Pass map reference
-        enemies.add(new Enemy(200, 400, map)); // Pass map reference
+        enemies.add(new Enemy(400, 300, map));
+        enemies.add(new Enemy(600, 200, map));
+        enemies.add(new Enemy(200, 400, map));
     }
 
     @Override
     public void addNotify() {
         super.addNotify();
-        // Removed requestFocusInWindow here to allow Main class to manage focus
     }
 
     public void startGameThread() {
@@ -135,7 +123,7 @@ public class GameLoop extends JLayeredPane implements Runnable {
 
     @Override
     public void run() {
-        double drawInterval = 1000000000.0 / 60.0; // 60 FPS
+        double drawInterval = 1000000000.0 / 60.0;
         double delta = 0;
         long lastTime = System.nanoTime();
 
@@ -154,13 +142,11 @@ public class GameLoop extends JLayeredPane implements Runnable {
 
     public void update() {
         if (inventoryOpen) {
-            // If inventory is open, pause game updates
             return;
         }
 
         float deltaTime = 1.0f / 60.0f;
 
-    	// Check collisions between SlashAttacks and enemies
     	for (SlashAttack slash : player.getSlashes()) {
     	    if (!slash.active) continue;
     	    Rectangle slashBounds = slash.getBounds();
@@ -174,7 +160,6 @@ public class GameLoop extends JLayeredPane implements Runnable {
     	    }
     	}
 
-    	// Check collisions between SkillWAttacks and enemies
     	for (SkillWAttack skillW : player.getSkillWAttacks()) {
     	    if (!skillW.active) continue;
     	    Rectangle skillWBounds = skillW.getBounds();
@@ -188,23 +173,19 @@ public class GameLoop extends JLayeredPane implements Runnable {
     	    }
     	}
 
-        // Update player
         player.update(deltaTime); 
 
-        // Check if player is dead
         if (!player.isAlive() && player.isDeathAnimationFinished()) {
-            gameThread = null; // Stop the game loop
-            // Capture the current screen as a BufferedImage
+            gameThread = null;
             BufferedImage screenshot = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB);
             Graphics2D g2d = screenshot.createGraphics();
-            paintComponent(g2d); // Render the current game state to the screenshot
+            paintComponent(g2d);
             g2d.dispose();
             
-            gameOverCallback.onGameOver(screenshot); // Trigger game over screen with screenshot
-            return; // Skip further updates
+            gameOverCallback.onGameOver(screenshot);
+            return;
         }
 
-        // Update enemies to follow the player
         for (Enemy enemy : enemies) {
             enemy.update(player.getX(), player.getY(), player);
         }
@@ -212,58 +193,41 @@ public class GameLoop extends JLayeredPane implements Runnable {
 
     @Override
     protected void paintComponent(Graphics g) {
-        super.paintComponent(g); // Call super.paintComponent for JLayeredPane
+        super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        // Only draw game world if inventory is not open (or draw behind it)
-        // If inventory is a JInternalFrame, it will manage its own painting over the background.
-        // For a simple JPanel, we draw the game world first.
+        int cameraX = (int) player.px - WIDTH / 2;
+        int cameraY = (int) player.py - HEIGHT / 2;
 
-        // Calculate camera position to center on the player
-        int cameraX = (int) player.px - WIDTH / 2; // Use player.px
-        int cameraY = (int) player.py - HEIGHT / 2; // Use player.py
-
-        // Clamp camera to map boundaries
         cameraX = Math.max(0, Math.min(cameraX, map.getMapWidth() - WIDTH));
         cameraY = Math.max(0, Math.min(cameraY, map.getMapHeight() - HEIGHT));
 
-        // Render the map
         map.render(g2d, cameraX, cameraY, WIDTH, HEIGHT);
 
-        // Adjust player's draw position based on camera
-        int playerScreenX = (int) player.px - cameraX; // Use player.px
-        int playerScreenY = (int) player.py - cameraY; // Use player.py
+        int playerScreenX = (int) player.px - cameraX;
+        int playerScreenY = (int) player.py - cameraY;
 
-        // Draw player
         player.draw(g, playerScreenX, playerScreenY);
 
-        // ✅ Draw enemies
         for (Enemy enemy : enemies) {
             int enemyScreenX = enemy.getX() - cameraX;
             int enemyScreenY = enemy.getY() - cameraY;
             enemy.draw(g, enemyScreenX, enemyScreenY);
         }
 
-        // === SKILL ANIMATIONS ===
-        // Draw Slash Q skill attacks
         for (SlashAttack s : player.getSlashes()) {
             int slashScreenX = s.x - cameraX;
             int slashScreenY = s.y - cameraY;
             s.draw(g, slashScreenX, slashScreenY);
         }
-        // Draw Skill W attacks
         for (SkillWAttack s : player.getSkillWAttacks()) {
-            // Assuming SkillWAttack also needs screen coordinates
             int skillWScreenX = s.x - cameraX;
             int skillWScreenY = s.y - cameraY;
             s.draw(g, skillWScreenX, skillWScreenY);
         }
 
-        // Draw hotbar
         hotbar.draw(g2d);
         drawHotbarKeys(g2d);
-        // Do not dispose g2d here as JLayeredPane might manage its own children's painting.
-        // The dispose will be called automatically by the Swing system.
     }
 
     private void drawHotbarKeys(Graphics2D g2d) {
@@ -276,18 +240,17 @@ public class GameLoop extends JLayeredPane implements Runnable {
         int hotbarX = (WIDTH - hotbarWidth) / 2;
         int hotbarY = HEIGHT - slotSize - 10;
 
-        String[] keys = {"", "", "B", "N", "M"}; 
+        String[] keys = {"", "", "B", "N", "M"};
         for (int i = 2; i < numSlots; i++) {
             String key = keys[i];
             FontMetrics fm = g2d.getFontMetrics();
             int stringWidth = fm.stringWidth(key);
             int x = hotbarX + i * slotSize + (slotSize - stringWidth) / 2;
-            int y = hotbarY - 5; 
+            int y = hotbarY - 5;
             g2d.drawString(key, x, y);
         }
     }
 
-    // Define a functional interface for the game over callback
     public interface GameOverCallback {
         void onGameOver(BufferedImage screenshot);
     }
