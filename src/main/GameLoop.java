@@ -7,7 +7,6 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import input.KeyHandler;
 import entities.Player;
-import entities.Enemy;
 import entities.SlashAttack;
 import entities.SkillWAttack;
 import entities.InventoryUI;
@@ -26,7 +25,6 @@ public class GameLoop extends JLayeredPane implements Runnable {
     private Thread gameThread;
     private KeyHandler keyH;
     private Player player;
-    private ArrayList<Enemy> enemies;  // ✅ Enemy list
     private TileManager tileM; // Tile manager for rendering tiles
     private Hotbar hotbar;
     private GameOverCallback gameOverCallback; // Callback for game over
@@ -49,12 +47,8 @@ public class GameLoop extends JLayeredPane implements Runnable {
         tileM = new TileManager(this);
 
         // Initialize player with KeyHandler (start in walkable grass area)
-        player = new Player(144, 80, keyH); // Position (144,80) = center of tile (3,1) area with all grass tiles
+        player = new Player(336, 336, keyH); // Position (336,336) = center of open grass area away from obstacles
         player.setTileManager(tileM); // Pass TileManager reference for collision
-
-        // ✅ Initialize enemies
-        enemies = new ArrayList<>();
-        spawnEnemies();
 
         // Initialize inventory
         gameInventory = new InventoryUI(WIDTH, HEIGHT);
@@ -72,12 +66,8 @@ public class GameLoop extends JLayeredPane implements Runnable {
 
     public void reset() {
         // Reset player state
-        player = new Player(144, 80, keyH); // Re-initialize player at start position in grass, full HP
+        player = new Player(336, 336, keyH); // Re-initialize player at open grass area, full HP
         player.setTileManager(tileM); // Re-set TileManager reference
-
-        // Clear and re-spawn enemies
-        enemies.clear();
-        spawnEnemies();
 
         // Reset inventory (if necessary, clear items or reset state)
         gameInventory.reset();
@@ -115,12 +105,7 @@ public class GameLoop extends JLayeredPane implements Runnable {
         }
     }
 
-    // ✅ Create test enemies
-    private void spawnEnemies() {
-        enemies.add(new Enemy(400, 300)); // No map reference
-        enemies.add(new Enemy(600, 200)); // No map reference
-        enemies.add(new Enemy(200, 400)); // No map reference
-    }
+
 
     @Override
     public void addNotify() {
@@ -160,45 +145,12 @@ public class GameLoop extends JLayeredPane implements Runnable {
 
         float deltaTime = 1.0f / 60.0f;
 
-    	// Check collisions between SlashAttacks and enemies
-    	for (SlashAttack slash : player.getSlashes()) {
-    	    if (!slash.active) continue;
-    	    Rectangle slashBounds = slash.getBounds();
-    	    for (Enemy enemy : enemies) {
-    	        if (enemy.isAlive() && slashBounds.intersects(enemy.getBounds())) {
-                    if (!slash.hasHit(enemy)) {
-                        enemy.takeDamage(slash.getDamage());
-                        slash.addHitEnemy(enemy);
-                    }
-    	        }
-    	    }
-    	}
-
-    	// Check collisions between SkillWAttacks and enemies
-    	for (SkillWAttack skillW : player.getSkillWAttacks()) {
-    	    if (!skillW.active) continue;
-    	    Rectangle skillWBounds = skillW.getBounds();
-    	    for (Enemy enemy : enemies) {
-    	        if (enemy.isAlive() && skillWBounds.intersects(enemy.getBounds())) {
-                    if (!skillW.hasHit(enemy)) {
-                        enemy.takeDamage(skillW.getDamage());
-                        skillW.addHitEnemy(enemy);
-                    }
-    	        }
-    	    }
-    	}
-
         // Update player
         player.update(deltaTime);
 
         // Handle freeze skill
         Rectangle freezeArea = player.getFreezeArea();
         if (freezeArea != null) {
-            for (Enemy enemy : enemies) {
-                if (enemy.isAlive() && freezeArea.intersects(enemy.getBounds())) {
-                    enemy.freeze(180); // Freeze for 180 frames (3 seconds at 60fps)
-                }
-            }
             player.clearFreezeArea();
         }
 
@@ -210,14 +162,9 @@ public class GameLoop extends JLayeredPane implements Runnable {
             Graphics2D g2d = screenshot.createGraphics();
             paintComponent(g2d); // Render the current game state to the screenshot
             g2d.dispose();
-            
+
             gameOverCallback.onGameOver(screenshot); // Trigger game over screen with screenshot
             return; // Skip further updates
-        }
-
-        // Update enemies to follow the player
-        for (Enemy enemy : enemies) {
-            enemy.update(player.getX(), player.getY(), player);
         }
     }
 
@@ -249,13 +196,6 @@ public class GameLoop extends JLayeredPane implements Runnable {
 
         // Draw player
         player.draw(g, playerScreenX, playerScreenY);
-
-        // ✅ Draw enemies
-        for (Enemy enemy : enemies) {
-            int enemyScreenX = enemy.getX() - cameraX;
-            int enemyScreenY = enemy.getY() - cameraY;
-            enemy.draw(g, enemyScreenX, enemyScreenY);
-        }
 
         // === SKILL ANIMATIONS ===
         // Draw Slash Q skill attacks

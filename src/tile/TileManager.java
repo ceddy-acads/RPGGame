@@ -9,8 +9,8 @@ import javax.imageio.ImageIO;
 public class TileManager {
     private Tile[] tile;
     private int tileSize = 48; // Default tile size
-    private int mapWidth = 25; // Expanded map width (1200 pixels)
-    private int mapHeight = 20; // Expanded map height (960 pixels)
+    private int mapWidth = 37; // Expanded map width (1776 pixels)
+    private int mapHeight = 32; // Expanded map height (1536 pixels)
     private int[][] tileMap; // 2D array to store tile IDs
 
     public TileManager(Object gameLoop) {
@@ -82,6 +82,21 @@ public class TileManager {
             tile[2] = new Tile();
             tile[2].image = ImageIO.read(getClass().getResourceAsStream("/assets/tiles/water01.png"));
             tile[2].collision = true;
+
+            // Tile 3: earth (walkable)
+            tile[3] = new Tile();
+            tile[3].image = ImageIO.read(getClass().getResourceAsStream("/assets/tiles/earth.png"));
+            tile[3].collision = false;
+                        
+            // Tile 4: floor (walkable)
+            tile[4] = new Tile();
+               tile[4].image = ImageIO.read(getClass().getResourceAsStream("/assets/tiles/floor01.png"));
+             tile[4].collision = false;
+            
+            // Tile 5: hut (solid)
+            tile[5] = new Tile();
+            tile[5].image = ImageIO.read(getClass().getResourceAsStream("/assets/tiles/hut.png"));
+            tile[5].collision = true;
         } catch (IOException e) {
             System.err.println("Failed to load default tiles");
         }

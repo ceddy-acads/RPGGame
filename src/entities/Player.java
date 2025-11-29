@@ -82,8 +82,12 @@ public class Player {
     private int currentDirection = DOWN;
     
     // Player dimensions for collision
-    public final int playerWidth = 64;
-    public final int playerHeight = 64;
+    public final int playerWidth = 128;
+    public final int playerHeight = 128;
+
+    // Smaller collision box for better movement
+    private final int collisionWidth = 48;
+    private final int collisionHeight = 48;
 
     // Slash attacks for SkillQ
     private final ArrayList<SlashAttack> slashes = new ArrayList<>();
@@ -400,21 +404,21 @@ public class Player {
             dy *= 0.7071067811865476;
         }
 
-        // Apply movement with tile collision detection
+        // Apply movement with tile collision detection using smaller collision box
         if (tileManager != null) {
             // Try horizontal movement
             double proposedX = px + dx;
-            int topLeftX = (int) Math.round(proposedX - playerWidth / 2.0);
-            int topLeftY = (int) Math.round(py - playerHeight / 2.0);
-            if (((tile.TileManager) tileManager).isWalkable(topLeftX, topLeftY, playerWidth, playerHeight)) {
+            int topLeftX = (int) Math.round(proposedX - collisionWidth / 2.0);
+            int topLeftY = (int) Math.round(py - collisionHeight / 2.0);
+            if (((tile.TileManager) tileManager).isWalkable(topLeftX, topLeftY, collisionWidth, collisionHeight)) {
                 px = proposedX;
             }
 
             // Try vertical movement
             double proposedY = py + dy;
-            topLeftX = (int) Math.round(px - playerWidth / 2.0);
-            topLeftY = (int) Math.round(proposedY - playerHeight / 2.0);
-            if (((tile.TileManager) tileManager).isWalkable(topLeftX, topLeftY, playerWidth, playerHeight)) {
+            topLeftX = (int) Math.round(px - collisionWidth / 2.0);
+            topLeftY = (int) Math.round(proposedY - collisionHeight / 2.0);
+            if (((tile.TileManager) tileManager).isWalkable(topLeftX, topLeftY, collisionWidth, collisionHeight)) {
                 py = proposedY;
             }
         } else {
